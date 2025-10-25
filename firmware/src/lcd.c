@@ -2,35 +2,40 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define LCD_DATA (*(volatile uint8_t *)0x80000000)
-#define LCD_OPTS (*(volatile uint8_t *)0x80000001)
-#define LCD_ENABLE (*(volatile uint8_t *)0x80000002)
+typedef struct Lcd {
+    volatile uint8_t data;
+    volatile uint8_t opts;
+    volatile bool enable;
+} Lcd;
+
+static constexpr size_t LCD_BASE = 0x8000'0000;
+#define LCD ((Lcd *)LCD_BASE)
 
 static constexpr uint8_t LCD_WRITE_INSTR = 0b00;
 static constexpr uint8_t LCD_WRITE_DATA = 0b10;
 
 static inline void lcd_send(const uint8_t data)
 {
-    LCD_DATA = data;
-    LCD_ENABLE = 1;
-    LCD_ENABLE = 0;
+    LCD->data = data;
+    LCD->enable = true;
+    LCD->enable = false;
 }
 
 void lcd_send_instr(const uint8_t instr)
 {
-    LCD_OPTS = LCD_WRITE_INSTR;
+    LCD->opts = LCD_WRITE_INSTR;
     lcd_send(instr);
 }
 
 void lcd_print_char(const char c)
 {
-    LCD_OPTS = LCD_WRITE_DATA;
+    LCD->opts = LCD_WRITE_DATA;
     lcd_send(c);
 }
 
 void lcd_print(const char *restrict s)
 {
-    LCD_OPTS = LCD_WRITE_DATA;
+    LCD->opts = LCD_WRITE_DATA;
 
     while (*s != '\0')
         lcd_send(*s++);
@@ -38,7 +43,7 @@ void lcd_print(const char *restrict s)
 
 void lcd_print_n(const char *s, const size_t n)
 {
-    LCD_OPTS = LCD_WRITE_DATA;
+    LCD->opts = LCD_WRITE_DATA;
 
     for (size_t i = 0; i < n; ++i)
         lcd_send(*s++);
@@ -64,7 +69,7 @@ void lcd_print_int(int n)
         value /= 10;
     }
 
-    LCD_OPTS = LCD_WRITE_DATA;
+    LCD->opts = LCD_WRITE_DATA;
 
     if (negative)
         lcd_send('-');
@@ -75,7 +80,7 @@ void lcd_print_int(int n)
 
 void lcd_print_hex(uint32_t n)
 {
-    LCD_OPTS = LCD_WRITE_DATA;
+    LCD->opts = LCD_WRITE_DATA;
 
     for (size_t i = 0; i < 8; ++i) {
         const uint8_t nib = (n >> (4 * (7 - i))) & 0xF;
