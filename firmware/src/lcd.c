@@ -9,14 +9,14 @@
 static constexpr uint8_t LCD_WRITE_INSTR = 0b00;
 static constexpr uint8_t LCD_WRITE_DATA = 0b10;
 
-static void lcd_send(const uint8_t data)
+static inline void lcd_send(const uint8_t data)
 {
     LCD_DATA = data;
     LCD_ENABLE = 1;
     LCD_ENABLE = 0;
 }
 
-void lcd_send_instr(const LcdInstr instr)
+void lcd_send_instr(const uint8_t instr)
 {
     LCD_OPTS = LCD_WRITE_INSTR;
     lcd_send(instr);
