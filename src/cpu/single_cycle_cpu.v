@@ -1,27 +1,8 @@
 `default_nettype none
 
+`include "single_cycle_cpu.vh"
 `include "cpu_imm_extend.vh"
 `include "cpu_alu.vh"
-
-`define ALU_SRC_RD 1'b0
-`define ALU_SRC_IMM 1'b1
-
-`define PC_SRC_STEP 2'd0
-`define PC_SRC_JUMP 2'd1
-`define PC_SRC_ALU 2'd2
-`define PC_SRC_CURRENT 2'd3
-
-`define RESULT_SRC_ALU 3'd0
-`define RESULT_SRC_DATA 3'd1
-`define RESULT_SRC_IMM 3'd2
-`define RESULT_SRC_PC_TARGET 3'd3
-`define RESULT_SRC_PC_STEP 3'd4
-
-`define BRANCH_NONE 3'd0
-`define BRANCH_JALR 3'd1
-`define BRANCH_JAL 3'd2
-`define BRANCH_BREAK 3'd3
-`define BRANCH_COND 3'd4
 
 module scc_control (
     input wire [6:0] op,
@@ -32,7 +13,7 @@ module scc_control (
     input wire alu_borrow,
 
     output reg [2:0] branch_type,
-    output reg [2:0] result_src,
+    output reg [1:0] result_src,
     output reg [2:0] data_ext_control,
     output reg [3:0] mem_write,
     output reg [3:0] alu_control,
@@ -74,6 +55,7 @@ module scc_control (
         imm_src = `IMM_SRC_S;
         alu_src = `ALU_SRC_IMM;
         alu_control = `ALU_ADD;
+        result_src = `RESULT_SRC_ALU;
 
         case (funct3)
           3'b000:  mem_write = 4'b0001;
@@ -85,11 +67,14 @@ module scc_control (
       7'b0110011: begin  // alu (registers)
         alu_src = `ALU_SRC_RD;
         alu_control = {funct7[5], funct3};
+        result_src = `RESULT_SRC_ALU;
         reg_write = 1;
       end
       7'b0110111: begin  // lui
         imm_src = `IMM_SRC_U;
-        result_src = `RESULT_SRC_IMM;
+        alu_src = `ALU_SRC_IMM;
+        alu_control = `ALU_PASS_B;
+        result_src = `RESULT_SRC_ALU;
         reg_write = 1;
       end
       7'b1100011: begin  // branch instructions
@@ -115,7 +100,7 @@ module scc_control (
         reg_write = 1;
       end
       default: begin
-        $display("Unknown op: %h", op);
+        // $display("Unknown op: %h", op);
         branch_type = `BRANCH_BREAK;
       end
     endcase
@@ -132,26 +117,25 @@ module scc_branch_logic (
     output reg [1:0] pc_src
 );
   always @(*) begin
-    pc_src = `PC_SRC_STEP;
-
     case (branch_type)
-      `BRANCH_JALR:  pc_src = `PC_SRC_ALU;
-      `BRANCH_JAL:   pc_src = `PC_SRC_JUMP;
+      `BRANCH_NONE: pc_src = `PC_SRC_STEP;
+      `BRANCH_JALR: pc_src = `PC_SRC_ALU;
+      `BRANCH_JAL: pc_src = `PC_SRC_JUMP;
       `BRANCH_BREAK: pc_src = `PC_SRC_CURRENT;
       `BRANCH_COND: begin
+        pc_src = `PC_SRC_STEP;
+
         case (funct3)
-          3'b000: if (alu_zero) pc_src = `PC_SRC_JUMP;  // beq
-          3'b001: if (!alu_zero) pc_src = `PC_SRC_JUMP;  // bne
-          3'b100: if (alu_lt) pc_src = `PC_SRC_JUMP;  // blt
-          3'b101: if (!alu_lt) pc_src = `PC_SRC_JUMP;  // bge
-          3'b110: if (alu_borrow) pc_src = `PC_SRC_JUMP;  // bltu
-          3'b111: if (!alu_borrow) pc_src = `PC_SRC_JUMP;  // bgeu
-          default: begin
-          end
+          3'b000:  if (alu_zero) pc_src = `PC_SRC_JUMP;  // beq
+          3'b001:  if (!alu_zero) pc_src = `PC_SRC_JUMP;  // bne
+          3'b100:  if (alu_lt) pc_src = `PC_SRC_JUMP;  // blt
+          3'b101:  if (!alu_lt) pc_src = `PC_SRC_JUMP;  // bge
+          3'b110:  if (alu_borrow) pc_src = `PC_SRC_JUMP;  // bltu
+          3'b111:  if (!alu_borrow) pc_src = `PC_SRC_JUMP;  // bgeu
+          default: pc_src = {2'bxx};
         endcase
       end
-      default: begin
-      end
+      default: pc_src = {2'bxx};
     endcase
   end
 endmodule
@@ -172,7 +156,7 @@ module single_cycle_cpu (
 
   wire [1:0] pc_src;
   wire [2:0] branch_type;
-  wire [2:0] result_src;
+  wire [1:0] result_src;
   wire mem_write;
   wire [3:0] alu_control;
   wire alu_src;
@@ -238,7 +222,6 @@ module single_cycle_cpu (
     case (result_src)
       `RESULT_SRC_ALU:       result = alu_result;
       `RESULT_SRC_DATA:      result = data_ext;
-      `RESULT_SRC_IMM:       result = imm_ext;
       `RESULT_SRC_PC_TARGET: result = pc_target;
       `RESULT_SRC_PC_STEP:   result = pc_plus_4;
       default:               result = 32'b0;

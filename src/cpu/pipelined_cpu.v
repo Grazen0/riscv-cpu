@@ -1,162 +1,8 @@
 `default_nettype none
 
+`include "single_cycle_cpu.vh"
 `include "cpu_imm_extend.vh"
 `include "cpu_alu.vh"
-
-`define ALU_SRC_RD 1'b0
-`define ALU_SRC_IMM 1'b1
-
-`define PC_SRC_STEP 2'd0
-`define PC_SRC_JUMP 2'd1
-`define PC_SRC_ALU 2'd2
-`define PC_SRC_CURRENT 2'd3
-
-`define RESULT_SRC_ALU 2'd0
-`define RESULT_SRC_DATA 2'd1
-`define RESULT_SRC_PC_TARGET 2'd2
-`define RESULT_SRC_PC_STEP 2'd3
-
-`define BRANCH_NONE 3'd0
-`define BRANCH_JALR 3'd1
-`define BRANCH_JAL 3'd2
-`define BRANCH_BREAK 3'd3
-`define BRANCH_COND 3'd4
-
-module pl_control (
-    input wire [6:0] op,
-    input wire [2:0] funct3,
-    input wire [6:0] funct7,
-    input wire alu_zero,
-    input wire alu_lt,
-    input wire alu_borrow,
-
-    output reg [2:0] branch_type,
-    output reg [1:0] result_src,
-    output reg [2:0] data_ext_control,
-    output reg [3:0] mem_write,
-    output reg [3:0] alu_control,
-    output reg alu_src,
-    output reg [2:0] imm_src,
-    output reg reg_write
-);
-  always @(*) begin
-    branch_type = `BRANCH_NONE;
-    result_src = `RESULT_SRC_ALU;
-    mem_write = 4'b0000;
-    alu_control = 4'b1111;
-    alu_src = `ALU_SRC_RD;
-    imm_src = `IMM_SRC_I;
-    reg_write = 0;
-
-    case (op)
-      7'b0000011: begin  // load
-        imm_src = `IMM_SRC_I;
-        alu_src = `ALU_SRC_IMM;
-        alu_control = `ALU_ADD;
-        result_src = `RESULT_SRC_DATA;
-        reg_write = 1;
-        data_ext_control = funct3;
-      end
-      7'b0010011: begin  // alu (immediate)
-        imm_src = `IMM_SRC_I;
-        alu_src = `ALU_SRC_IMM;
-        alu_control = {(funct3 == 3'b101) ? funct7[5] : 1'b0, funct3};
-        result_src = `RESULT_SRC_ALU;
-        reg_write = 1;
-      end
-      7'b0010111: begin  // auipc
-        imm_src = `IMM_SRC_U;
-        result_src = `RESULT_SRC_PC_TARGET;
-        reg_write = 1;
-      end
-      7'b0100011: begin  // store
-        imm_src = `IMM_SRC_S;
-        alu_src = `ALU_SRC_IMM;
-        alu_control = `ALU_ADD;
-        result_src = `RESULT_SRC_ALU;
-
-        case (funct3)
-          3'b000:  mem_write = 4'b0001;
-          3'b001:  mem_write = 4'b0011;
-          3'b010:  mem_write = 4'b1111;
-          default: mem_write = 4'b0000;
-        endcase
-      end
-      7'b0110011: begin  // alu (registers)
-        alu_src = `ALU_SRC_RD;
-        alu_control = {funct7[5], funct3};
-        result_src = `RESULT_SRC_ALU;
-        reg_write = 1;
-      end
-      7'b0110111: begin  // lui
-        imm_src = `IMM_SRC_U;
-        alu_src = `ALU_SRC_IMM;
-        alu_control = `ALU_PASS_B;
-        result_src = `RESULT_SRC_ALU;
-        reg_write = 1;
-      end
-      7'b1100011: begin  // branch instructions
-        imm_src = `IMM_SRC_B;
-        alu_src = `ALU_SRC_RD;
-        alu_control = `ALU_SUB;
-        branch_type = `BRANCH_COND;
-      end
-      7'b1100111: begin  // jalr
-        imm_src = `IMM_SRC_I;
-        alu_src = `ALU_SRC_IMM;
-        alu_control = `ALU_ADD;
-        branch_type = `BRANCH_JALR;
-
-        result_src = `RESULT_SRC_PC_STEP;
-        reg_write = 1;
-      end
-      7'b1101111: begin  // jal
-        imm_src = `IMM_SRC_J;
-        branch_type = `BRANCH_JAL;
-
-        result_src = `RESULT_SRC_PC_STEP;
-        reg_write = 1;
-      end
-      default: begin
-        // $display("Unknown op: %h", op);
-        branch_type = `BRANCH_BREAK;
-      end
-    endcase
-  end
-endmodule
-
-module pl_branch_logic (
-    input wire [2:0] branch_type,
-    input wire [2:0] funct3,
-    input wire alu_zero,
-    input wire alu_lt,
-    input wire alu_borrow,
-
-    output reg [1:0] pc_src
-);
-  always @(*) begin
-    case (branch_type)
-      `BRANCH_NONE: pc_src = `PC_SRC_STEP;
-      `BRANCH_JALR: pc_src = `PC_SRC_ALU;
-      `BRANCH_JAL: pc_src = `PC_SRC_JUMP;
-      `BRANCH_BREAK: pc_src = `PC_SRC_CURRENT;
-      `BRANCH_COND: begin
-        pc_src = `PC_SRC_STEP;
-
-        case (funct3)
-          3'b000:  if (alu_zero) pc_src = `PC_SRC_JUMP;  // beq
-          3'b001:  if (!alu_zero) pc_src = `PC_SRC_JUMP;  // bne
-          3'b100:  if (alu_lt) pc_src = `PC_SRC_JUMP;  // blt
-          3'b101:  if (!alu_lt) pc_src = `PC_SRC_JUMP;  // bge
-          3'b110:  if (alu_borrow) pc_src = `PC_SRC_JUMP;  // bltu
-          3'b111:  if (!alu_borrow) pc_src = `PC_SRC_JUMP;  // bgeu
-          default: pc_src = {2'bxx};
-        endcase
-      end
-      default: pc_src = {2'bxx};
-    endcase
-  end
-endmodule
 
 `define FORWARD_NONE 2'd0
 `define FORWARD_WRITEBACK 2'd1
@@ -311,7 +157,7 @@ module pipelined_cpu (
   wire [31:0] rd1_d;
   wire [31:0] rd2_d;
 
-  pl_control control (
+  scc_control control (
       .op(instr_d[6:0]),
       .funct3(funct3_d),
       .funct7(instr_d[31:25]),
@@ -371,7 +217,7 @@ module pipelined_cpu (
       mem_write_e <= 0;
       data_ext_control_e <= 4'b0000;
       alu_control_e <= 4'b0000;
-      alu_src_e <= `ALU_SRC_RD;
+      alu_src_e <= 0;
 
       rd1_e <= 5'b0;
       rd2_e <= 5'b0;
@@ -411,7 +257,7 @@ module pipelined_cpu (
   wire alu_lt_e;
   wire [1:0] pc_src_e;
 
-  pl_branch_logic branch_logic (
+  scc_branch_logic branch_logic (
       .branch_type(branch_type_e),
       .funct3(funct3_e),
       .alu_zero(alu_zero_e),
