@@ -28,9 +28,15 @@ module top_pl_tb ();
     rst_n = 0;
     #1 rst_n = 1;
 
-    #100000;
+    #10_000_000;
     $display("");
     $display("");
     $finish();
+  end
+
+  always @(negedge lcd_enable) begin
+    if (lcd_ctrl == 2'b10) begin
+      $write("%c", lcd_data);
+    end
   end
 endmodule

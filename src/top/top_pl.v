@@ -5,12 +5,12 @@ module top_pl (
     input wire rst_n,
 
     output wire clk_out,
-    output reg [7:0] lcd_data,
+    output tri [7:0] lcd_data,
     output reg [1:0] lcd_ctrl,
     output reg lcd_enable
 );
   clk_divider #(
-      .PERIOD(2)
+      .PERIOD(400_000)
   ) divider (
       .clk_in (clk),
       .rst_n  (rst_n),
@@ -48,26 +48,24 @@ module top_pl (
       .data_rdata(data_rdata)
   );
 
-  always @(posedge clk or negedge rst_n) begin
+  reg [7:0] lcd_data_out;
+
+  // NOTE: consecutive writes don't work. Careful!
+  always @(posedge clk_out or negedge rst_n) begin
     if (!rst_n) begin
-      lcd_data   <= 0;
-      lcd_ctrl   <= 0;
+      lcd_data_out <= 0;
+      lcd_ctrl <= 2'b00;
       lcd_enable <= 0;
-    end else if (data_wenable[0] && data_addr[31]) begin
-      case (data_addr[1:0])
-        2'b00: lcd_data <= data_wdata[7:0];
-        2'b01: lcd_ctrl <= data_wdata[1:0];
-        2'b10: lcd_enable <= data_wdata[0];
-        default: begin
-        end
-      endcase
+    end else begin
+      if (data_wenable[0] && data_addr[31]) begin
+        lcd_data_out <= data_wdata[7:0];
+        lcd_ctrl <= {data_addr[0], 1'b0};
+        lcd_enable <= 1;
+      end else begin
+        lcd_enable <= 0;
+      end
     end
   end
 
-  always @(negedge lcd_enable) begin
-    if (lcd_ctrl == 2'b10) begin
-      $write("%c", lcd_data);
-    end
-  end
-
+  assign lcd_data = lcd_ctrl[0] ? 8'bxxxx_xxxx : lcd_data_out;
 endmodule

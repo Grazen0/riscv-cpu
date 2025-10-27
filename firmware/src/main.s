@@ -9,6 +9,3 @@ _start:
     call    start
 
     j       .
-
-.data
-hello: .asciz "Hello, world!"
