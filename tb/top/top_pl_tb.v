@@ -4,6 +4,12 @@ module top_pl_tb ();
   reg clk, rst_n;
   always #5 clk = ~clk;
 
+  wire [3:0] vga_red;
+  wire [3:0] vga_green;
+  wire [3:0] vga_blue;
+  wire h_sync;
+  wire v_sync;
+
   wire clk_out;
   wire [7:0] lcd_data;
   wire [1:0] lcd_ctrl;
@@ -16,7 +22,13 @@ module top_pl_tb ();
       .clk_out(clk_out),
       .lcd_data(lcd_data),
       .lcd_ctrl(lcd_ctrl),
-      .lcd_enable(lcd_enable)
+      .lcd_enable(lcd_enable),
+
+      .vga_red(vga_red),
+      .vga_green(vga_green),
+      .vga_blue(vga_blue),
+      .h_sync(h_sync),
+      .v_sync(v_sync)
   );
 
   initial begin
@@ -28,7 +40,7 @@ module top_pl_tb ();
     rst_n = 0;
     #1 rst_n = 1;
 
-    #10_000_000;
+    #1_000_000;
     $display("");
     $display("");
     $finish();

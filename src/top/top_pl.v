@@ -7,14 +7,30 @@ module top_pl (
     output wire clk_out,
     output tri [7:0] lcd_data,
     output reg [1:0] lcd_ctrl,
-    output reg lcd_enable
+    output reg lcd_enable,
+
+    output wire [3:0] vga_red,
+    output wire [3:0] vga_green,
+    output wire [3:0] vga_blue,
+    output wire h_sync,
+    output wire v_sync
 );
   clk_divider #(
-      .PERIOD(400_000)
-  ) divider (
+      .PERIOD(2)
+  ) cpu_divider (
       .clk_in (clk),
       .rst_n  (rst_n),
       .clk_out(clk_out)
+  );
+
+  wire clk_vga;
+
+  clk_divider #(
+      .PERIOD(2)
+  ) vga_divider (
+      .clk_in (clk),
+      .rst_n  (rst_n),
+      .clk_out(clk_vga)
   );
 
   wire [31:0] instr_data;
@@ -68,4 +84,14 @@ module top_pl (
   end
 
   assign lcd_data = lcd_ctrl[0] ? 8'bxxxx_xxxx : lcd_data_out;
+
+  vga_controller vga (
+      .clk(clk_vga),
+      .rst_n(rst_n),
+      .vga_red(vga_red),
+      .vga_green(vga_green),
+      .vga_blue(vga_blue),
+      .h_sync(h_sync),
+      .v_sync(v_sync)
+  );
 endmodule
