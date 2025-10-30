@@ -43,6 +43,6 @@ module dual_memory #(
   integer i;
 
   initial begin
-    $readmemh("data/firmware.hex", mem);
+    $readmemh("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem", mem);
   end
 endmodule

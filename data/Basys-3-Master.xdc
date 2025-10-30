@@ -104,7 +104,7 @@ set_property -dict { PACKAGE_PIN G3   IOSTANDARD LVCMOS33 } [get_ports {lcd_data
 ##Pmod Header JXADC
 set_property -dict { PACKAGE_PIN J3   IOSTANDARD LVCMOS33 } [get_ports {lcd_ctrl[0]}];#Sch name = XA1_P
 set_property -dict { PACKAGE_PIN L3   IOSTANDARD LVCMOS33 } [get_ports {lcd_ctrl[1]}];#Sch name = XA2_P
-set_property -dict { PACKAGE_PIN M2   IOSTANDARD LVCMOS33 } [get_ports {lcd_enable[2]}];#Sch name = XA3_P
+set_property -dict { PACKAGE_PIN M2   IOSTANDARD LVCMOS33 } [get_ports {lcd_enable}];#Sch name = XA3_P
 #set_property -dict { PACKAGE_PIN N2   IOSTANDARD LVCMOS33 } [get_ports {JXADC[3]}];#Sch name = XA4_P
 #set_property -dict { PACKAGE_PIN K3   IOSTANDARD LVCMOS33 } [get_ports {JXADC[4]}];#Sch name = XA1_N
 #set_property -dict { PACKAGE_PIN M3   IOSTANDARD LVCMOS33 } [get_ports {JXADC[5]}];#Sch name = XA2_N

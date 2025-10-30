@@ -15,7 +15,7 @@ IVERILOG_FLAGS := $(INC_FLAGS)
 DATA_DIR := ./data
 FIRMWARE_DIR := firmware
 
-FIRMWARE_HEX = firmware.hex
+FIRMWARE_MEM = firmware.mem
 
 .PHONY: clean run wave firmware
 
@@ -28,17 +28,17 @@ clean:
 
 FORCE: ;
 
-$(DATA_DIR)/%.hex: FORCE
+$(DATA_DIR)/%.mem: FORCE
 	@set -e; \
 	if make -C $(FIRMWARE_DIR) -q; then \
 		echo "Up to date"; \
 	else \
 		echo "Building firmware..."; \
 		make -C $(FIRMWARE_DIR); \
-		cp $(FIRMWARE_DIR)/build/*.hex $(DATA_DIR); \
+		cp $(FIRMWARE_DIR)/build/*.mem $(DATA_DIR); \
 	fi
 
-$(BUILD_DIR)/%: $(TB_DIR)/%.v $(SRCS) $(DATA_DIR)/$(FIRMWARE_HEX)
+$(BUILD_DIR)/%: $(TB_DIR)/%.v $(SRCS) $(DATA_DIR)/$(FIRMWARE_MEM)
 	mkdir -p $(dir $@)
 	iverilog $(IVERILOG_FLAGS) -o $@ $< $(SRCS) 
 

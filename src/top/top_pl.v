@@ -15,8 +15,9 @@ module top_pl (
     output wire h_sync,
     output wire v_sync
 );
+
   clk_divider #(
-      .PERIOD(2)
+      .PERIOD(500_000)
   ) cpu_divider (
       .clk_in (clk),
       .rst_n  (rst_n),

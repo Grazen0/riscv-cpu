@@ -1,7 +1,7 @@
 PROJECT_NAME := firmware
 TARGET_EXEC := $(PROJECT_NAME).elf
 TARGET_BIN := $(PROJECT_NAME).bin
-TARGET_HEX := $(PROJECT_NAME).hex
+TARGET_MEM := $(PROJECT_NAME).mem
 
 BUILD_DIR := ./build
 SRC_DIRS := ./src
@@ -26,7 +26,7 @@ CDB := compile_commands.json
 
 .PHONY: all clean
 
-all: $(BUILD_DIR)/$(TARGET_HEX)
+all: $(BUILD_DIR)/$(TARGET_MEM)
 
 clean:
 	rm -rf $(BUILD_DIR)
@@ -35,7 +35,7 @@ compdb:
 	mkdir -p $(BUILD_DIR)
 	$(BEAR) --output $(BUILD_DIR)/$(CDB) -- make -B
 
-$(BUILD_DIR)/%.hex: $(BUILD_DIR)/%.bin
+$(BUILD_DIR)/%.mem: $(BUILD_DIR)/%.bin
 	$(XXD) -p -c4 -e $< | awk '{print $$2}' > $@
 
 $(BUILD_DIR)/$(TARGET_BIN): $(BUILD_DIR)/$(TARGET_EXEC)

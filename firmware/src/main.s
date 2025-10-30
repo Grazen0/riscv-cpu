@@ -5,7 +5,7 @@ _start:
     la      gp, __global_pointer$
     la      sp, __stack_top
 
-    call    __libc_init_array
+    # call    __libc_init_array
     call    start
 
     j       .
