@@ -32,9 +32,8 @@ module pl_hazard_unit (
     output wire stall_f,
     output wire stall_d,
     output wire flush_e,
-    output wire flush_m,
 
-    input wire [1:0] pc_src_m,
+    input wire [1:0] pc_src_e,
     output wire flush_d
 );
   wire lw_stall = result_src_e == `RESULT_SRC_DATA && (rs1_d == rd_e || rs2_d == rd_e);
@@ -65,9 +64,8 @@ module pl_hazard_unit (
 
   assign stall_f = lw_stall;
   assign stall_d = lw_stall;
-  assign flush_d = pc_src_m != `PC_SRC_STEP;
-  assign flush_e = lw_stall || pc_src_m != `PC_SRC_STEP;
-  assign flush_m = pc_src_m != `PC_SRC_STEP;
+  assign flush_d = pc_src_e != `PC_SRC_STEP;
+  assign flush_e = lw_stall || pc_src_e != `PC_SRC_STEP;
 endmodule
 
 module pipelined_cpu (
@@ -90,7 +88,6 @@ module pipelined_cpu (
   wire stall_f;
   wire stall_d;
   wire flush_e;
-  wire flush_m;
   wire flush_d;
 
   pl_hazard_unit hazard_unit (
@@ -117,9 +114,8 @@ module pipelined_cpu (
       .stall_f(stall_f),
       .stall_d(stall_d),
       .flush_e(flush_e),
-      .flush_m(flush_m),
 
-      .pc_src_m(pc_src_m),
+      .pc_src_e(pc_src_e),
       .flush_d (flush_d)
   );
 
@@ -144,10 +140,10 @@ module pipelined_cpu (
   reg [31:0] pc_next;
 
   always @(*) begin
-    case (pc_src_m)
+    case (pc_src_e)
       `PC_SRC_STEP:    pc_next = pc_plus_4_f;
-      `PC_SRC_JUMP:    pc_next = pc_target_m;
-      `PC_SRC_ALU:     pc_next = alu_result_m & ~1;
+      `PC_SRC_JUMP:    pc_next = pc_target_e;
+      `PC_SRC_ALU:     pc_next = alu_result_e & ~1;
       `PC_SRC_CURRENT: pc_next = pc_f;
       default:         pc_next = {32{1'bx}};
     endcase
@@ -399,6 +395,19 @@ module pipelined_cpu (
       .lt    (alu_lt_e)
   );
 
+  wire [1:0] pc_src_e;
+
+  scc_branch_logic branch_logic (
+      .branch_type(branch_type_e),
+      .funct3     (funct3_e),
+      .alu_zero   (alu_zero_e),
+      .alu_borrow (alu_borrow_e),
+      .alu_lt     (alu_lt_e),
+
+      .pc_src(pc_src_e)
+  );
+
+
   // 4. Memory
   reg        regw_src_m;
   reg        reg_write_m;
@@ -415,25 +424,14 @@ module pipelined_cpu (
   reg [31:0] pc_target_m;
   reg [31:0] pc_plus_4_m;
 
-  reg [ 2:0] branch_type_m;
-  reg [ 2:0] funct3_m;
-  reg        alu_zero_m;
-  reg        alu_borrow_m;
-  reg        alu_lt_m;
-
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || flush_m) begin
+    if (!rst_n) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
       csr_write_m        <= 0;
       result_src_m       <= `RESULT_SRC_ALU;
       mem_write_m        <= 4'b0000;
       data_ext_control_m <= 4'b0000;
-      branch_type_m      <= `BRANCH_NONE;
-      funct3_m           <= 3'b000;
-      alu_zero_m         <= 0;
-      alu_lt_m           <= 0;
-      alu_borrow_m       <= 0;
       csr_addr_m         <= 0;
 
       csr_data_m         <= 32'b0;
@@ -451,12 +449,6 @@ module pipelined_cpu (
       data_ext_control_m <= data_ext_control_e;
       csr_addr_m         <= csr_addr_e;
 
-      branch_type_m      <= branch_type_e;
-      funct3_m           <= funct3_e;
-      alu_zero_m         <= alu_zero_e;
-      alu_borrow_m       <= alu_borrow_e;
-      alu_lt_m           <= alu_lt_e;
-
       csr_data_m         <= csr_data_e;
       alu_result_m       <= alu_result_e;
       write_data_m       <= write_data_e;
@@ -465,18 +457,6 @@ module pipelined_cpu (
       pc_plus_4_m        <= pc_plus_4_e;
     end
   end
-
-  wire [1:0] pc_src_m;
-
-  scc_branch_logic branch_logic (
-      .branch_type(branch_type_m),
-      .funct3     (funct3_m),
-      .alu_zero   (alu_zero_m),
-      .alu_borrow (alu_borrow_m),
-      .alu_lt     (alu_lt_m),
-
-      .pc_src(pc_src_m)
-  );
 
   wire [31:0] read_data_m;
   reg  [31:0] reg_wd3_m;
