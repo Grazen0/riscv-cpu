@@ -1,10 +1,18 @@
 // 800x600 @ 72 Hz
 module vga_controller (
     input wire clk,
+    input wire wclk,
     input wire rst_n,
 
-    input wire [$clog2(VRAM_SIZE)-1:0] vram_waddr,
+    input wire [$clog2(VRAM_SIZE)-1:0] vram_addr,
     input wire [7:0] vram_wdata,
+    input wire vram_wenable,
+    output wire [7:0] vram_rdata,
+
+    input wire [1:0] palette_addr,
+    input wire [11:0] palette_wdata,
+    input wire palette_wenable,
+    output wire [11:0] palette_rdata,
 
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
@@ -26,35 +34,29 @@ module vga_controller (
 
   reg [11:0] palette[0:3];
 
+  assign palette_rdata = palette[palette_addr];
+
   // 28 is nicer than 25. Produces some leftover tiles, but sacrifices must be made.
   localparam TILES_H = 28;
   localparam TILES_V = 18;
   localparam TILES_TOTAL = TILES_H * TILES_V;
-  localparam VRAM_SIZE = (TILES_TOTAL + 3) / 4;  // ceil(total / 4)
+  localparam VRAM_SIZE = (TILES_TOTAL + 3) / 4;  // = ceil(total / 4)
 
-  reg [31:0] vram[0:VRAM_SIZE-1];
+  wire [7:0] vram_show_data;
 
-  integer i;
+  dual_byte_ram #(
+      .SIZE(VRAM_SIZE)
+  ) vram (
+      .clk(wclk),
 
-  initial begin
-    palette[0] = 12'b0000_0000_0000;  // black
-    palette[1] = 12'b1111_0000_0000;  // red
-    palette[2] = 12'b0000_1111_0000;  // green
-    palette[3] = 12'b0000_0000_1111;  // blue
+      .addr_1(vram_addr),
+      .wdata_1(vram_wdata),
+      .wenable_1(vram_wenable),
+      .rdata_1(vram_rdata),
 
-    for (i = 0; i < VRAM_SIZE; i = i + 1) begin
-      vram[i] = 32'b0;
-    end
-
-    vram[0] = 8'b00_01_10_11;
-    vram[1] = 8'b00_01_10_11;
-    vram[2] = 8'b00_01_10_11;
-    vram[3] = 8'b00_01_10_11;
-    vram[4] = 8'b11_10_01_00;
-    vram[5] = 8'b11_10_01_00;
-    vram[6] = 8'b11_10_01_00;
-    vram[7] = 8'b11_10_01_00;
-  end
+      .addr_2 (vram_show_addr),
+      .rdata_2(vram_show_data)
+  );
 
   reg [$clog2(V_FRAME)-1:0] y_pos, y_pos_next;
   reg [$clog2(H_LINE)-1:0] x_pos, x_pos_next;
@@ -120,6 +122,12 @@ module vga_controller (
     endcase
   end
 
+  always @(posedge wclk) begin
+    if (palette_wenable) begin
+      palette[palette_addr] <= palette_wdata;
+    end
+  end
+
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       x_pos <= 0;
@@ -148,7 +156,7 @@ module vga_controller (
 
       // 72 Hz change on vram to test if the screen changes.
       if (y_pos != 0 && y_pos_next == 0) begin
-        vram[2] <= vram[2] + 1;
+        vram.mem[2] <= vram.mem[2] + 1;
       end
     end
   end
@@ -156,11 +164,10 @@ module vga_controller (
   wire visible = h_visible & v_visible;
   wire [3:0] visible_mask = {4{visible}};
 
-  wire [$clog2(VRAM_SIZE)-1:0] vram_addr = tile_idx[TILE_IDX_WIDTH-1:2];
-  wire [7:0] cur_byte = vram[vram_addr];
+  wire [$clog2(VRAM_SIZE)-1:0] vram_show_addr = tile_idx[TILE_IDX_WIDTH-1:2];
 
   wire [1:0] byte_offset = tile_idx[1:0];
-  wire [1:0] pal_idx = cur_byte >> (2 * byte_offset);  // Should optimize to byte_offset << 1
+  wire [1:0] pal_idx = vram_show_data >> (2 * byte_offset);
   wire [11:0] cur_color = palette[pal_idx];
 
   assign vga_red   = cur_color[11:8] & visible_mask;

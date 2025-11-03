@@ -29,6 +29,8 @@ module top_pl_tb ();
       .v_sync(v_sync)
   );
 
+  integer i, j;
+
   initial begin
     $dumpvars(0, top_pl_tb);
 
@@ -41,6 +43,14 @@ module top_pl_tb ();
     #100_000;
     $display("");
     $display("");
+
+    // for (i = 0; i < 16; i = i + 1) begin
+    //   for (j = 0; j < 4; j = j + 1) begin
+    //     $write("%h ", top.ram.data[(16*i)+j]);
+    //   end
+    //   $display("");
+    // end
+
     $finish();
   end
 

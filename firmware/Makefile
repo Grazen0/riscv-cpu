@@ -13,9 +13,11 @@ LINKER := ./linker.ld
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CFLAGS := $(INC_FLAGS) -no-pie -march=rv32i_zicsr -mabi=ilp32 -std=c23 -O2 -g \
+CFLAGS := $(INC_FLAGS) -march=rv32i_zicsr -mabi=ilp32 -std=c23 -O2 -g \
 		  -ffunction-sections -fdata-sections -Wl,-gc-sections -ffreestanding \
-		  -specs=nano.specs -nostartfiles
+		  -specs=nano.specs -nostartfiles -static
+
+LDFLAGS := -mno-relax
 
 CC := riscv32-none-elf-gcc
 OBJCOPY := riscv32-none-elf-objcopy

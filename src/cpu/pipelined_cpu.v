@@ -167,8 +167,8 @@ module pipelined_cpu (
       pc_d <= {32{1'bx}};
       pc_plus_4_d <= {32{1'bx}};
     end else if (!stall_d) begin
-      instr_d <= instr_data;
-      pc_d <= pc_f;
+      instr_d     <= instr_data;
+      pc_d        <= pc_f;
       pc_plus_4_d <= pc_plus_4_f;
     end
   end

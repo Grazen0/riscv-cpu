@@ -22,10 +22,10 @@ module top_mcc (
   wire [31:0] mem_wdata;
   wire [ 3:0] mem_wenable;
 
-  dual_memory memory (
+  dual_word_ram ram (
       .clk(clk),
 
-      .addr_1(mem_addr),
+      .addr_1(mem_addr[11:0]),
       .wdata_1(mem_wdata),
       .wenable_1(mem_wenable & {4{~mem_addr[31]}}),
 

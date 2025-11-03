@@ -48,5 +48,5 @@ module cpu_alu (
     endcase
   end
 
-  assign zero = src_a == src_b;  // Lower delay than result == 0
+  assign zero = result == 0;
 endmodule

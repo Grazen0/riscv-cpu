@@ -10,7 +10,7 @@ typedef struct {
     volatile u8 data;
 } LcdScreen;
 
-static constexpr size_t LCD_BASE = 0x8000'0000;
+static constexpr size_t LCD_BASE = 0x4000'0000;
 #define LCD ((LcdScreen *)LCD_BASE)
 
 void lcd_send_instr(const u8 instr)

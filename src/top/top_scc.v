@@ -23,15 +23,15 @@ module top_scc (
   wire [31:0] data_addr, data_wdata, data_rdata;
   wire [3:0] data_wenable;
 
-  dual_memory memory (
+  dual_word_ram ram (
       .clk(clk_out),
 
-      .addr_1(data_addr),
+      .addr_1(data_addr[11:0]),
       .rdata_1(data_rdata),
       .wdata_1(data_wdata),
       .wenable_1(data_wenable & {4{~data_addr[31]}}),
 
-      .addr_2 (instr_addr),
+      .addr_2 (instr_addr[11:0]),
       .rdata_2(instr_data)
   );
 
