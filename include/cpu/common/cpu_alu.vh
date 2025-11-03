@@ -13,7 +13,6 @@
 `define ALU_AND 4'b0111
 `define ALU_PASS_A 4'b1001
 `define ALU_PASS_B 4'b1010
-`define ALU_NOP 4'b1111
-
+`define ALU_AND_NOT 4'b1011
 
 `endif

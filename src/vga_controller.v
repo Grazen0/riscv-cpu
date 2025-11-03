@@ -2,6 +2,10 @@
 module vga_controller (
     input wire clk,
     input wire rst_n,
+
+    input wire [$clog2(VRAM_SIZE)-1:0] vram_waddr,
+    input wire [7:0] vram_wdata,
+
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
     output wire [3:0] vga_blue,

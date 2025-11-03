@@ -12,7 +12,6 @@ module cpu_alu (
     output reg borrow,
     output wire zero,
     output reg overflow,
-    output wire neg,
     output reg lt
 );
   wire signed [31:0] src_a_signed = src_a;
@@ -44,11 +43,10 @@ module cpu_alu (
       `ALU_AND: result = src_a & src_b;
       `ALU_PASS_A: result = src_a;
       `ALU_PASS_B: result = src_b;
-      `ALU_NOP: result = {32{1'bx}};
+      `ALU_AND_NOT: result = src_a & ~src_b;
       default: result = {32{1'bx}};
     endcase
   end
 
-  assign zero = (result == 0);
-  assign neg  = result[31];
+  assign zero = src_a == src_b;  // Lower delay than result == 0
 endmodule

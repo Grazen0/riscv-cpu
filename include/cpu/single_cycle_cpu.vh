@@ -1,8 +1,13 @@
 `ifndef SINGLE_CYCLE_CPU_VH
 `define SINGLE_CYCLE_CPU_VH
 
-`define ALU_SRC_RD 1'b0
-`define ALU_SRC_IMM 1'b1
+`define ALU_SRC_A_RD 1'd0
+`define ALU_SRC_A_CSR 1'd1
+
+`define ALU_SRC_B_RD2 2'd0
+`define ALU_SRC_B_IMM 2'd1
+`define ALU_SRC_B_RD1 2'd2
+`define ALU_SRC_B_A1 2'd3
 
 `define PC_SRC_STEP 2'd0
 `define PC_SRC_JUMP 2'd1
@@ -13,6 +18,9 @@
 `define RESULT_SRC_DATA 2'd1
 `define RESULT_SRC_PC_TARGET 2'd2
 `define RESULT_SRC_PC_STEP 2'd3
+
+`define REGW_SRC_RESULT 1'd0
+`define REGW_SRC_CSR 1'd1
 
 `define BRANCH_NONE 3'd0
 `define BRANCH_JALR 3'd1

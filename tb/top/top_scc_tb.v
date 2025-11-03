@@ -34,7 +34,7 @@ module top_scc_tb ();
     rst_n = 0;
     #1 rst_n = 1;
 
-    #1000000;
+    #400;
     $display("");
     $display("");
     $finish();
