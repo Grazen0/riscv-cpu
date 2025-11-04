@@ -5,17 +5,8 @@ MEMORY {
 }
 
 SECTIONS {
-  .start : {
-    KEEP(*(.text._start))
-    . = ALIGN(4);
-  } > DATA
-
-  .irq_handler 0x40 : {
-    KEEP(*(.irq_handler))
-    . = ALIGN(4);
-  } > DATA
-
   .text : {
+    KEEP(*(.text._start))
     *(.text)
     *(.text.*)
     *(.rodata) 

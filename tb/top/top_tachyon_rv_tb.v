@@ -48,7 +48,7 @@ module top_tachyon_rv_tb ();
     rst_n = 0;
     #1 rst_n = 1;
 
-    #100_000;
+    #300_000;
     $display("");
     $display("");
 

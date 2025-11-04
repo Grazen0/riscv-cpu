@@ -244,7 +244,7 @@ module pipelined_cpu (
   // 1. Fetch
   reg  [31:0] pc_f;
 
-  wire [31:0] int_saved_pc = !bubble_e ? pc_e : !bubble_d ? pc_d : pc_f;
+  wire [31:0] trap_pc_next = !bubble_e ? pc_e : !bubble_d ? pc_d : pc_f;
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -257,9 +257,7 @@ module pipelined_cpu (
   reg [31:0] pc_next;
 
   always @(*) begin
-    if (trap_pc) begin
-      pc_next = 32'h40;
-    end else if (trap_mret) begin
+    if (trap_pc || trap_mret) begin
       pc_next = csr_data_d;
     end else begin
       case (pc_src_e)
@@ -358,11 +356,11 @@ module pipelined_cpu (
       .clk  (~clk),
       .rst_n(rst_n),
 
-      .raddr(trap_mret ? `CSR_MEPC : csr_addr_d),
+      .raddr(trap_pc ? `CSR_MTVEC : trap_mret ? `CSR_MEPC : csr_addr_d),
       .rdata(csr_data_d),
 
       .waddr  (trap_pc ? `CSR_MEPC : csr_addr_w),
-      .wdata  (trap_pc ? int_saved_pc : result_w),
+      .wdata  (trap_pc ? trap_pc_next : result_w),
       .wenable(trap_pc || csr_write_w)
   );
 

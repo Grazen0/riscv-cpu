@@ -106,9 +106,9 @@ module scc_control (
         reg_write = 1;
       end
       7'b1110011: begin
-        if (funct7 == 7'b0011000) begin  // mret
+        if (funct3 == 3'b000) begin  // mret
           trap_mret = 1;
-        end else begin  // csrrw
+        end else if (funct3 == 3'b001) begin  // csrrw
           imm_src   = `IMM_SRC_I;
 
           alu_src_a = `ALU_SRC_A_CSR;
@@ -128,6 +128,8 @@ module scc_control (
           regw_src   = `REGW_SRC_CSR;  // Write CSR to register
           reg_write  = 1;
           csr_write  = 1;
+        end else begin
+          branch_type = `BRANCH_BREAK;
         end
       end
       default: begin
