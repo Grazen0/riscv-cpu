@@ -35,8 +35,9 @@ $(DATA_DIR)/%.mem: FORCE
 	else \
 		echo "Building firmware..."; \
 		make -C $(FIRMWARE_DIR); \
-		cp $(FIRMWARE_DIR)/build/*.mem $(DATA_DIR); \
 	fi
+
+	cp $(FIRMWARE_DIR)/build/*.mem $(DATA_DIR); \
 
 $(BUILD_DIR)/%: $(TB_DIR)/%.v $(SRCS) $(DATA_DIR)/$(FIRMWARE_MEM)
 	mkdir -p $(dir $@)
