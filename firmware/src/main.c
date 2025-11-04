@@ -26,7 +26,5 @@ void start(void)
     lcd_send_instr(LCD_RETURN_HOME);
     lcd_send_instr(LCD_DISPLAY_CONTROL(LCDDC_DISPLAY | LCDDC_CURSOR | LCDDC_BLINK));
 
-    static const char hello[] = "Hello, world!\n";
-    lcd_print(hello);
-    // lcd_print_hex(VRAM->data[4]);
+    lcd_print("Hello, world!");
 }

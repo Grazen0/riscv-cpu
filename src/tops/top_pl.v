@@ -4,9 +4,9 @@ module top_pl (
     input wire clk,
     input wire rst_n,
 
-    output tri [7:0] lcd_data,
-    output reg [1:0] lcd_ctrl,
-    output reg lcd_enable,
+    output wire [7:0] lcd_data,
+    output wire [1:0] lcd_ctrl,
+    output wire lcd_enable,
 
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
@@ -26,7 +26,9 @@ module top_pl (
   wire [ 3:0] data_wenable;
   wire [31:0] mem_rdata;
 
-  dual_word_ram ram (
+  dual_word_ram #(
+      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem")
+  ) ram (
       .clk(clk),
 
       .addr_1   (data_addr[11:0]),
@@ -78,27 +80,6 @@ module top_pl (
       .clk_out(clk_vga)
   );
 
-  reg [7:0] lcd_data_out;
-
-  // NOTE: consecutive writes don't work. Careful!
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      lcd_data_out <= 0;
-      lcd_ctrl     <= 2'b00;
-      lcd_enable   <= 0;
-    end else begin
-      if (|data_wenable && data_select == SEL_LCD) begin
-        lcd_data_out <= data_wdata[7:0];
-        lcd_ctrl     <= {data_addr[0], 1'b0};
-        lcd_enable   <= 1;
-      end else begin
-        lcd_enable <= 0;
-      end
-    end
-  end
-
-  assign lcd_data = lcd_ctrl[0] ? 8'bxxxx_xxxx : lcd_data_out;
-
   wire [ 7:0] vram_rdata;
   wire [11:0] palette_rdata;
 
@@ -122,5 +103,18 @@ module top_pl (
       .palette_wdata  (data_wdata[11:0]),
       .palette_wenable(&data_wenable[1:0] && data_select == SEL_PALETTE),
       .palette_rdata  (palette_rdata)
+  );
+
+  lcd_controller lcd (
+      .clk  (clk),
+      .rst_n(rst_n),
+
+      .rs(data_addr[0]),
+      .wdata(data_wdata[7:0]),
+      .wenable(data_wenable && data_select == SEL_LCD),
+
+      .lcd_data  (lcd_data),
+      .lcd_ctrl  (lcd_ctrl),
+      .lcd_enable(lcd_enable)
   );
 endmodule

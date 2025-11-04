@@ -1,7 +1,8 @@
 `default_nettype none
 
 module dual_word_ram #(
-    parameter SIZE = 2 ** 12
+    parameter SIZE = 2 ** 12,
+    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem"
 ) (
     input wire clk,
 
@@ -42,6 +43,6 @@ module dual_word_ram #(
   assign rdata_2 = mem[word_addr_2] >> (8 * offset_2);
 
   initial begin
-    $readmemh("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem", mem);
+    $readmemh(SOURCE_FILE, mem);
   end
 endmodule

@@ -29,15 +29,8 @@ clean:
 FORCE: ;
 
 $(DATA_DIR)/%.mem: FORCE
-	@set -e; \
-	if make -C $(FIRMWARE_DIR) -q; then \
-		echo "Up to date"; \
-	else \
-		echo "Building firmware..."; \
-		make -C $(FIRMWARE_DIR); \
-	fi
-
-	cp $(FIRMWARE_DIR)/build/*.mem $(DATA_DIR); \
+	make -C $(FIRMWARE_DIR)
+	cp $(FIRMWARE_DIR)/build/*.mem $(DATA_DIR);
 
 $(BUILD_DIR)/%: $(TB_DIR)/%.v $(SRCS) $(DATA_DIR)/$(FIRMWARE_MEM)
 	mkdir -p $(dir $@)
