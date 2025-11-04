@@ -1,7 +1,7 @@
 `default_nettype none
 
 // Consecutive writes don't work. Careful!
-module lcd_controller (
+module lcd_unit (
     input wire clk,
     input wire rst_n,
 

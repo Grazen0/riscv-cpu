@@ -13,6 +13,17 @@ static constexpr u8 LCDDC_DISPLAY = 0b100;
 static constexpr u8 LCDDC_CURSOR = 0b010;
 static constexpr u8 LCDDC_BLINK = 0b001;
 
+typedef struct {
+    union {
+        volatile u8 instr;
+        volatile u8 status;
+    };
+    volatile u8 data;
+} LcdScreen;
+
+static constexpr size_t LCD_BASE = 0xC000'0000;
+#define LCD ((LcdScreen *)LCD_BASE)
+
 void lcd_send_instr(u8 instr);
 
 void lcd_print_char(char c);

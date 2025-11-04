@@ -2,17 +2,6 @@
 #include "num.h"
 #include <stddef.h>
 
-typedef struct {
-    union {
-        volatile u8 instr;
-        volatile u8 status;
-    };
-    volatile u8 data;
-} LcdScreen;
-
-static constexpr size_t LCD_BASE = 0x4000'0000;
-#define LCD ((LcdScreen *)LCD_BASE)
-
 void lcd_send_instr(const u8 instr)
 {
     LCD->instr = instr;

@@ -28,12 +28,12 @@ module top_scc (
   ) ram (
       .clk(clk_out),
 
-      .addr_1(data_addr[11:0]),
+      .addr_1(data_addr[9:0]),
       .rdata_1(data_rdata),
       .wdata_1(data_wdata),
       .wenable_1(data_wenable & {4{~data_addr[31]}}),
 
-      .addr_2 (instr_addr[11:0]),
+      .addr_2 (instr_addr[9:0]),
       .rdata_2(instr_data)
   );
 

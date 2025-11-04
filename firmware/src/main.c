@@ -12,8 +12,12 @@ static const uint16_t palette_data[] = {
 
 void start(void)
 {
-    video_set_palette(palette_data);
+    VREGS->display_on = false;
+
     video_clear_vram();
+    video_set_palette(palette_data);
+
+    VREGS->display_on = true;
 
     VRAM->data[0] = 0b00'01'10'11;
     VRAM->data[1] = 0b11'10'10'11;

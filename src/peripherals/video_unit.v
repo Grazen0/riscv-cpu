@@ -1,5 +1,5 @@
 // 800x600 @ 72 Hz
-module vga_controller (
+module video_unit (
     input wire clk,
     input wire wclk,
     input wire rst_n,
@@ -13,6 +13,9 @@ module vga_controller (
     input wire [11:0] palette_wdata,
     input wire palette_wenable,
     output wire [11:0] palette_rdata,
+
+    input wire regs_wdata,
+    input wire regs_wenable,
 
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
@@ -32,6 +35,7 @@ module vga_controller (
   localparam V_BACK = V_SYNC + 6;
   localparam V_FRAME = V_BACK + 23;
 
+  reg display_on;
   reg [11:0] palette[0:3];
 
   assign palette_rdata = palette[palette_addr];
@@ -126,10 +130,16 @@ module vga_controller (
     if (palette_wenable) begin
       palette[palette_addr] <= palette_wdata;
     end
+
+    if (regs_wenable) begin
+      display_on <= regs_wdata;
+    end
   end
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
+      display_on <= 0;
+
       x_pos <= 0;
       y_pos <= 0;
 
@@ -162,7 +172,7 @@ module vga_controller (
   end
 
   wire visible = h_visible & v_visible;
-  wire [3:0] visible_mask = {4{visible}};
+  wire [3:0] visible_mask = {4{visible & display_on}};
 
   wire [$clog2(VRAM_SIZE)-1:0] vram_show_addr = tile_idx[TILE_IDX_WIDTH-1:2];
 

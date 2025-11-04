@@ -42,8 +42,7 @@ The memory map for **data memory** is as follows:
 
 |        Address range        |  Description  | Size (bytes) |
 | :-------------------------: | :-----------: | :----------: |
-| `0x0000_0000 - 0x0000_1000` |  Program ROM  |     4096     |
-| `0x8000_0000 - 0x8000_0200` |   Work RAM    |     1024     |
+| `0x0000_0000 - 0x0000_1000` |      RAM      |     4096     |
 | `0xC000_0000 - 0xC000_0008` | Video palette |      8       |
 | `0xD000_0000 - 0xD000_0080` |   Video RAM   |     128      |
 |        `0xE000'0000`        |   LCD ctrl    |      1       |
