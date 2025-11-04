@@ -1,7 +1,7 @@
 `default_nettype none
 
 module dual_word_ram #(
-    parameter SIZE = 2 ** 10,
+    parameter SIZE = 2 ** 12,
     parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem"
 ) (
     input wire clk,

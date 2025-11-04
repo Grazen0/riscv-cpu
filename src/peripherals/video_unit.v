@@ -53,10 +53,10 @@ module video_unit (
   ) vram (
       .clk(wclk),
 
-      .addr_1(vram_addr),
-      .wdata_1(vram_wdata),
+      .addr_1   (vram_addr),
+      .wdata_1  (vram_wdata),
       .wenable_1(vram_wenable),
-      .rdata_1(vram_rdata),
+      .rdata_1  (vram_rdata),
 
       .addr_2 (vram_show_addr),
       .rdata_2(vram_show_data)
@@ -126,20 +126,22 @@ module video_unit (
     endcase
   end
 
-  always @(posedge wclk) begin
-    if (palette_wenable) begin
-      palette[palette_addr] <= palette_wdata;
-    end
+  always @(posedge wclk or negedge rst_n) begin
+    if (!rst_n) begin
+      display_on <= 0;
+    end else begin
+      if (palette_wenable) begin
+        palette[palette_addr] <= palette_wdata;
+      end
 
-    if (regs_wenable) begin
-      display_on <= regs_wdata;
+      if (regs_wenable) begin
+        display_on <= regs_wdata;
+      end
     end
   end
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      display_on <= 0;
-
       x_pos <= 0;
       y_pos <= 0;
 
@@ -163,11 +165,6 @@ module video_unit (
 
       h_visible <= h_visible_next;
       v_visible <= v_visible_next;
-
-      // 72 Hz change on vram to test if the screen changes.
-      if (y_pos != 0 && y_pos_next == 0) begin
-        vram.mem[2] <= vram.mem[2] + 1;
-      end
     end
   end
 

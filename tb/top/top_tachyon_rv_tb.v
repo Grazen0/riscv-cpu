@@ -1,8 +1,10 @@
 `timescale 1ns / 1ps `default_nettype none
 
-module top_pl_tb ();
+module top_tachyon_rv_tb ();
   reg clk, rst_n;
   always #5 clk = ~clk;
+
+  reg [4:0] joypad;
 
   wire [3:0] vga_red;
   wire [3:0] vga_green;
@@ -14,9 +16,13 @@ module top_pl_tb ();
   wire [1:0] lcd_ctrl;
   wire lcd_enable;
 
-  top_pl top (
+  wire audio_out;
+
+  top_tachyon_rv tachy (
       .clk  (clk),
       .rst_n(rst_n),
+
+      .joypad(joypad),
 
       .lcd_data  (lcd_data),
       .lcd_ctrl  (lcd_ctrl),
@@ -26,30 +32,25 @@ module top_pl_tb ();
       .vga_green(vga_green),
       .vga_blue(vga_blue),
       .h_sync(h_sync),
-      .v_sync(v_sync)
+      .v_sync(v_sync),
+
+      .audio_out(audio_out)
   );
 
-  integer i, j;
-
   initial begin
-    $dumpvars(0, top_pl_tb);
+    $dumpvars(0, top_tachyon_rv_tb);
 
     $display("");
 
-    clk   = 1;
+    joypad = 5'b00000;
+
+    clk = 1;
     rst_n = 0;
     #1 rst_n = 1;
 
     #100_000;
     $display("");
     $display("");
-
-    // for (i = 0; i < 16; i = i + 1) begin
-    //   for (j = 0; j < 4; j = j + 1) begin
-    //     $write("%h ", top.ram.data[(16*i)+j]);
-    //   end
-    //   $display("");
-    // end
 
     $finish();
   end

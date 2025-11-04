@@ -1,14 +1,21 @@
 ENTRY(_start)
 
 MEMORY {
-  DATA (rwx) : ORIGIN = 0x00000000, LENGTH = 20K
+  DATA (rwx) : ORIGIN = 0x00000000, LENGTH = 16K
 }
 
 SECTIONS {
-  .text : {
-    . = 0x0;
+  .start : {
+    KEEP(*(.text._start))
+    . = ALIGN(4);
+  } > DATA
 
-    *(.text._start) /* Ensure _start at 0x0 */
+  .irq_handler 0x40 : {
+    KEEP(*(.irq_handler))
+    . = ALIGN(4);
+  } > DATA
+
+  .text : {
     *(.text)
     *(.text.*)
     *(.rodata) 

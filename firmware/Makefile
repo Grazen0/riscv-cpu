@@ -15,7 +15,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CFLAGS := $(INC_FLAGS) -march=rv32i_zicsr -mabi=ilp32 -std=c23 -Oz -g \
 		  -ffunction-sections -fdata-sections -Wl,-gc-sections -ffreestanding \
-		  -nostdlib -nostartfiles -static
+		  -nostdlib -nostartfiles -static -mno-relax -fno-pic
 
 LDFLAGS := -mno-relax
 

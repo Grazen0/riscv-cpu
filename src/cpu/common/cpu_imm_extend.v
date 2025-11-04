@@ -10,7 +10,7 @@ module cpu_imm_extend (
   wire [11:0] imm_i = data[24:13];
   wire [11:0] imm_s = {data[24:18], data[4:0]};
   wire [12:0] imm_b = {data[24], data[0], data[23:18], data[4:1], 1'b0};
-  wire [31:0] imm_u = {data[24:5], {12{1'b0}}};
+  wire [31:0] imm_u = {data[24:5], 12'b0};
   wire [20:0] imm_j = {data[24], data[12:5], data[13], data[23:14], 1'b0};
 
   always @(*) begin

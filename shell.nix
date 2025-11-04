@@ -5,7 +5,6 @@ let
   riscvPkgs = import <nixpkgs> {
     crossSystem = {
       config = "riscv32-none-elf";
-      libc = "newlib-nano";
       abi = "ilp32";
       gcc = {
         arch = "rv32i";
@@ -29,6 +28,5 @@ pkgs.mkShell {
 
     riscvPkgs.buildPackages.binutils
     riscvPkgs.buildPackages.gcc
-    riscvPkgs.newlib-nano
   ];
 }

@@ -1,6 +1,7 @@
 `default_nettype none
 
 `include "single_cycle_cpu.vh"
+`include "cpu_csr_file.vh"
 `include "cpu_imm_extend.vh"
 `include "cpu_alu.vh"
 
@@ -68,6 +69,98 @@ module pl_hazard_unit (
   assign flush_e = lw_stall || pc_src_e != `PC_SRC_STEP;
 endmodule
 
+module pl_interrupt_control (
+    input wire clk,
+    input wire rst_n,
+
+    input wire irq,
+
+    output reg trap_pc,
+    output reg trap_stages,
+
+    output reg flush_m,
+    output reg flush_e,
+    output reg flush_d,
+
+    output reg stall_e,
+    output reg stall_d,
+    output reg stall_f
+);
+  localparam S_IDLE = 2'd0;
+  localparam S_WAIT1 = 2'd1;
+  localparam S_WAIT2 = 2'd2;
+
+  reg [1:0] state, next_state;
+
+  wire irq_pending;
+  reg  ack;
+
+  irq_gate irq_g (
+      .clk  (clk),
+      .rst_n(rst_n),
+
+      .irq(irq),
+      .ack(ack),
+      .irq_pending(irq_pending)
+  );
+
+  always @(*) begin
+    flush_m = 0;
+    flush_e = 0;
+    flush_d = 0;
+    stall_e = 0;
+    stall_d = 0;
+    stall_f = 0;
+
+    ack = 0;
+    trap_pc = 0;
+    trap_stages = 0;
+
+    case (state)
+      S_IDLE: begin
+        next_state = state;
+
+        if (irq_pending) begin
+          trap_stages = 1;
+          flush_m = 1;
+          stall_e = 1;
+          stall_d = 1;
+          stall_f = 1;
+
+          ack = 1;
+          next_state = S_WAIT1;
+        end
+      end
+      S_WAIT1: begin
+        trap_stages = 1;
+        flush_m = 1;
+        stall_e = 1;
+        stall_d = 1;
+        stall_f = 1;
+
+        next_state = S_WAIT2;
+      end
+      S_WAIT2: begin
+        trap_stages = 1;
+        flush_m = 1;
+        flush_e = 1;
+        flush_d = 1;
+
+        trap_pc = 1;
+        next_state = S_IDLE;
+      end
+    endcase
+  end
+
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      state <= S_IDLE;
+    end else begin
+      state <= next_state;
+    end
+  end
+endmodule
+
 module pipelined_cpu (
     input wire clk,
     input wire rst_n,
@@ -80,7 +173,7 @@ module pipelined_cpu (
     output wire [ 3:0] data_wenable,
     input  wire [31:0] data_rdata,
 
-    input wire irq_n
+    input wire irq
 );
   wire [1:0] forward_a_e;
   wire [1:0] forward_b_e;
@@ -119,20 +212,44 @@ module pipelined_cpu (
       .flush_d (flush_d)
   );
 
-  irq_gate irq_g (
+  wire flush_m_irq;
+  wire flush_e_irq;
+  wire flush_d_irq;
+
+  wire stall_e_irq;
+  wire stall_d_irq;
+  wire stall_f_irq;
+
+  wire trap_stages;
+  wire trap_pc;
+
+  pl_interrupt_control interrupt_control (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .irq(~irq_n)
+      .irq(irq),
+
+      .flush_m(flush_m_irq),
+      .flush_e(flush_e_irq),
+      .flush_d(flush_d_irq),
+
+      .stall_e(stall_e_irq),
+      .stall_d(stall_d_irq),
+      .stall_f(stall_f_irq),
+
+      .trap_stages(trap_stages),
+      .trap_pc(trap_pc)
   );
 
   // 1. Fetch
-  reg [31:0] pc_f;
+  reg  [31:0] pc_f;
+
+  wire [31:0] int_saved_pc = !bubble_e ? pc_e : !bubble_d ? pc_d : pc_f;
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       pc_f <= 0;
-    end else if (!stall_f) begin
+    end else if ((trap_stages || !stall_f) && !stall_f_irq) begin
       pc_f <= pc_next;
     end
   end
@@ -140,13 +257,19 @@ module pipelined_cpu (
   reg [31:0] pc_next;
 
   always @(*) begin
-    case (pc_src_e)
-      `PC_SRC_STEP:    pc_next = pc_plus_4_f;
-      `PC_SRC_JUMP:    pc_next = pc_target_e;
-      `PC_SRC_ALU:     pc_next = alu_result_e & ~1;
-      `PC_SRC_CURRENT: pc_next = pc_f;
-      default:         pc_next = {32{1'bx}};
-    endcase
+    if (trap_pc) begin
+      pc_next = 32'h40;
+    end else if (trap_mret) begin
+      pc_next = csr_data_d;
+    end else begin
+      case (pc_src_e)
+        `PC_SRC_STEP:    pc_next = pc_plus_4_f;
+        `PC_SRC_JUMP:    pc_next = pc_target_e;
+        `PC_SRC_ALU:     pc_next = alu_result_e & ~1;
+        `PC_SRC_CURRENT: pc_next = pc_f;
+        default:         pc_next = {32{1'bx}};
+      endcase
+    end
   end
 
   assign instr_addr = pc_f;
@@ -156,16 +279,19 @@ module pipelined_cpu (
   reg  [31:0] instr_d;
   reg  [31:0] pc_d;
   reg  [31:0] pc_plus_4_d;
+  reg         bubble_d;
 
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || flush_d) begin
-      instr_d <= 32'h00000013;  // nop
-      pc_d <= {32{1'bx}};
+    if (!rst_n || trap_mret || (!trap_stages && flush_d) || flush_d_irq) begin
+      instr_d     <= 32'h00000013;  // nop
+      pc_d        <= {32{1'bx}};
       pc_plus_4_d <= {32{1'bx}};
-    end else if (!stall_d) begin
+      bubble_d    <= 1;
+    end else if ((trap_stages || !stall_d) && !stall_d_irq) begin
       instr_d     <= instr_data;
       pc_d        <= pc_f;
       pc_plus_4_d <= pc_plus_4_f;
+      bubble_d    <= 0;
     end
   end
 
@@ -190,7 +316,8 @@ module pipelined_cpu (
   wire [31:0] imm_ext_d;
   wire [31:0] rd1_d;
   wire [31:0] rd2_d;
-  wire [31:0] csr_rd_d;
+  wire [31:0] csr_data_d;
+  wire        trap_mret;
 
   scc_control control (
       .op    (instr_d[6:0]),
@@ -207,7 +334,8 @@ module pipelined_cpu (
       .imm_src         (imm_src_d),
       .regw_src        (regw_src_d),
       .reg_write       (reg_write_d),
-      .csr_write       (csr_write_d)
+      .csr_write       (csr_write_d),
+      .trap_mret       (trap_mret)
   );
 
   cpu_register_file register_file (
@@ -230,12 +358,12 @@ module pipelined_cpu (
       .clk  (~clk),
       .rst_n(rst_n),
 
-      .raddr(csr_addr_d),
-      .rdata(csr_rd_d),
+      .raddr(trap_mret ? `CSR_MEPC : csr_addr_d),
+      .rdata(csr_data_d),
 
-      .waddr  (csr_addr_w),
-      .wdata  (result_w),
-      .wenable(csr_write_w)
+      .waddr  (trap_pc ? `CSR_MEPC : csr_addr_w),
+      .wdata  (trap_pc ? int_saved_pc : result_w),
+      .wenable(trap_pc || csr_write_w)
   );
 
   cpu_imm_extend imm_extend (
@@ -268,8 +396,10 @@ module pipelined_cpu (
   reg [ 2:0] branch_type_e;
   reg [ 2:0] funct3_e;
 
+  reg        bubble_e;
+
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || flush_e) begin
+    if (!rst_n || (!trap_stages && flush_e) || flush_e_irq) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
       csr_write_e        <= 0;
@@ -292,7 +422,9 @@ module pipelined_cpu (
       pc_plus_4_e        <= {32{1'bx}};
       branch_type_e      <= `BRANCH_NONE;
       funct3_e           <= 3'bxxx;
-    end else begin
+
+      bubble_e           <= 1;
+    end else if (!stall_e_irq) begin
       regw_src_e         <= regw_src_d;
       reg_write_e        <= reg_write_d;
       csr_write_e        <= csr_write_d;
@@ -306,7 +438,7 @@ module pipelined_cpu (
 
       rd1_e              <= rd1_d;
       rd2_e              <= rd2_d;
-      csr_data_e         <= csr_rd_d;
+      csr_data_e         <= csr_data_d;
       pc_e               <= pc_d;
       rs1_e              <= rs1_d;
       rs2_e              <= rs2_d;
@@ -315,6 +447,8 @@ module pipelined_cpu (
       pc_plus_4_e        <= pc_plus_4_d;
       branch_type_e      <= branch_type_d;
       funct3_e           <= funct3_d;
+
+      bubble_e           <= bubble_d;
     end
   end
 
@@ -425,7 +559,7 @@ module pipelined_cpu (
   reg [31:0] pc_plus_4_m;
 
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
+    if (!rst_n || flush_m_irq) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
       csr_write_m        <= 0;

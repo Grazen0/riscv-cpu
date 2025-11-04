@@ -19,7 +19,8 @@ module scc_control (
     output reg [2:0] imm_src,
     output reg regw_src,
     output reg reg_write,
-    output reg csr_write
+    output reg csr_write,
+    output reg trap_mret
 );
   always @(*) begin
     branch_type = `BRANCH_NONE;
@@ -32,6 +33,7 @@ module scc_control (
     reg_write = 0;
     regw_src = `REGW_SRC_RESULT;
     csr_write = 0;
+    trap_mret = 0;
 
     data_ext_control = funct3;
 
@@ -103,26 +105,30 @@ module scc_control (
         result_src = `RESULT_SRC_PC_STEP;
         reg_write = 1;
       end
-      7'b1110011: begin  // csrrw
-        imm_src   = `IMM_SRC_I;
+      7'b1110011: begin
+        if (funct7 == 7'b0011000) begin  // mret
+          trap_mret = 1;
+        end else begin  // csrrw
+          imm_src   = `IMM_SRC_I;
 
-        alu_src_a = `ALU_SRC_A_CSR;
-        alu_src_b = funct3[2] ? `ALU_SRC_B_A1 : `ALU_SRC_B_RD1;
+          alu_src_a = `ALU_SRC_A_CSR;
+          alu_src_b = funct3[2] ? `ALU_SRC_B_A1 : `ALU_SRC_B_RD1;
 
-        case (funct3[1:0])
-          2'b01: alu_control = `ALU_PASS_B;  // csrrw(i)
-          2'b10: alu_control = `ALU_OR;  // csrrs(i)
-          2'b11: alu_control = `ALU_AND_NOT;  // csrrc(i)
-          default: begin
-            alu_control = 4'bxxxx;
-            $display("unknown csr instruction funct3: %b", funct3);
-          end
-        endcase
+          case (funct3[1:0])
+            2'b01: alu_control = `ALU_PASS_B;  // csrrw(i)
+            2'b10: alu_control = `ALU_OR;  // csrrs(i)
+            2'b11: alu_control = `ALU_AND_NOT;  // csrrc(i)
+            default: begin
+              alu_control = 4'bxxxx;
+              $display("unknown csr instruction funct3: %b (funct7 = %b)", funct3, funct7);
+            end
+          endcase
 
-        result_src = `RESULT_SRC_ALU;  // Written to csr
-        regw_src   = `REGW_SRC_CSR;  // Write CSR to register
-        reg_write  = 1;
-        csr_write  = 1;
+          result_src = `RESULT_SRC_ALU;  // Written to csr
+          regw_src   = `REGW_SRC_CSR;  // Write CSR to register
+          reg_write  = 1;
+          csr_write  = 1;
+        end
       end
       default: begin
         // $display("Unknown op: %h", op);
