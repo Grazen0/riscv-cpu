@@ -1,4 +1,0 @@
-#ifndef FIRMWARE_SYSCALLS_H
-#define FIRMWARE_SYSCALLS_H
-
-#endif
