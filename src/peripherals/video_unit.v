@@ -9,19 +9,19 @@ module video_unit (
     input wire vram_wenable,
     output wire [7:0] vram_rdata,
 
-    input wire [1:0] palette_addr,
-    input wire [11:0] palette_wdata,
-    input wire palette_wenable,
+    input  wire [ 1:0] palette_addr,
+    input  wire [11:0] palette_wdata,
+    input  wire        palette_wenable,
     output wire [11:0] palette_rdata,
 
-    input wire regs_wdata,
-    input wire regs_wenable,
+    input wire ctrl_wdata,
+    input wire ctrl_wenable,
 
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
     output wire [3:0] vga_blue,
-    output reg h_sync,
-    output reg v_sync
+    output reg        h_sync,
+    output reg        v_sync
 );
   localparam H_VISIBLE = 0;
   localparam H_FRONT = H_VISIBLE + 800;
@@ -74,14 +74,14 @@ module video_unit (
   reg [TILE_IDX_WIDTH-1:0] tile_idx, tile_idx_next;
 
   always @(*) begin
-    y_pos_next = y_pos;
-    x_pos_next = x_pos + 1;
+    y_pos_next         = y_pos;
+    x_pos_next         = x_pos + 1;
 
     tile_idx_base_next = tile_idx_base;
-    tile_idx_next = tile_idx;
+    tile_idx_next      = tile_idx;
 
-    h_visible_next = h_visible;
-    v_visible_next = v_visible;
+    h_visible_next     = h_visible;
+    v_visible_next     = v_visible;
 
     if (x_pos[5] != x_pos_next[5] && h_visible) begin
       tile_idx_next = tile_idx + 1;
@@ -134,37 +134,34 @@ module video_unit (
         palette[palette_addr] <= palette_wdata;
       end
 
-      if (regs_wenable) begin
-        display_on <= regs_wdata;
+      if (ctrl_wenable) begin
+        display_on <= ctrl_wdata;
       end
     end
   end
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-      x_pos <= 0;
-      y_pos <= 0;
+      x_pos         <= 0;
+      y_pos         <= 0;
 
-      h_sync <= 1;
-      v_sync <= 1;
+      h_sync        <= 1;
+      v_sync        <= 1;
 
       tile_idx_base <= 0;
-      tile_idx <= 0;
+      tile_idx      <= 0;
 
-      h_visible <= 1;
-      v_visible <= 1;
+      h_visible     <= 1;
+      v_visible     <= 1;
     end else begin
-      x_pos <= x_pos_next;
-      y_pos <= y_pos_next;
-
-      h_sync <= h_sync_next;
-      v_sync <= v_sync_next;
-
+      x_pos         <= x_pos_next;
+      y_pos         <= y_pos_next;
+      h_sync        <= h_sync_next;
+      v_sync        <= v_sync_next;
       tile_idx_base <= tile_idx_base_next;
-      tile_idx <= tile_idx_next;
-
-      h_visible <= h_visible_next;
-      v_visible <= v_visible_next;
+      tile_idx      <= tile_idx_next;
+      h_visible     <= h_visible_next;
+      v_visible     <= v_visible_next;
     end
   end
 

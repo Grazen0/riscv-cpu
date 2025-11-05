@@ -20,7 +20,7 @@ module cpu_imm_extend (
       `IMM_SRC_B: imm_ext = {{19{imm_b[12]}}, imm_b};
       `IMM_SRC_U: imm_ext = imm_u;
       `IMM_SRC_J: imm_ext = {{11{imm_j[20]}}, imm_j};
-      default: imm_ext = {32{1'bx}};
+      default:    imm_ext = {32{1'bx}};
     endcase
   end
 endmodule

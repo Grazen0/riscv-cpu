@@ -9,13 +9,13 @@ module tachyon_rv (
 
     output wire [7:0] lcd_data,
     output wire [1:0] lcd_ctrl,
-    output wire lcd_enable,
+    output wire       lcd_enable,
 
     output wire [3:0] vga_red,
     output wire [3:0] vga_green,
     output wire [3:0] vga_blue,
-    output wire h_sync,
-    output wire v_sync,
+    output wire       h_sync,
+    output wire       v_sync,
 
     output wire audio_out
 );
@@ -107,18 +107,18 @@ module tachyon_rv (
       .wclk (clk),
       .rst_n(rst_n),
 
-      .vram_addr(data_addr[6:0]),
-      .vram_wdata(data_wdata[7:0]),
+      .vram_addr   (data_addr[6:0]),
+      .vram_wdata  (data_wdata[7:0]),
       .vram_wenable(data_wenable[0] && data_select == SEL_VRAM),
-      .vram_rdata(vram_rdata),
+      .vram_rdata  (vram_rdata),
 
       .palette_addr   (data_addr[2:1]),
       .palette_wdata  (data_wdata[11:0]),
       .palette_wenable(&data_wenable[1:0] && data_select == SEL_VPALETTE),
       .palette_rdata  (palette_rdata),
 
-      .regs_wdata  (data_wdata[0]),
-      .regs_wenable(data_wenable[0] && data_select == SEL_VCTRL),
+      .ctrl_wdata  (data_wdata[0]),
+      .ctrl_wenable(data_wenable[0] && data_select == SEL_VCTRL),
 
       .vga_red  (vga_red),
       .vga_green(vga_green),
@@ -131,9 +131,9 @@ module tachyon_rv (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .rs(data_addr[0]),
-      .wdata(data_wdata[7:0]),
-      .wenable(data_wenable && data_select == SEL_LCD),
+      .rs     (data_addr[0]),
+      .wdata  (data_wdata[7:0]),
+      .wenable(data_wenable[0] && data_select == SEL_LCD),
 
       .lcd_data  (lcd_data),
       .lcd_ctrl  (lcd_ctrl),
@@ -146,7 +146,7 @@ module tachyon_rv (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .wenable(|data_wenable && data_select == SEL_AUDIO),
+      .wenable(data_wenable[0] && data_select == SEL_AUDIO),
       .wdata  (data_wdata),
       .rdata  (audio_rdata),
 

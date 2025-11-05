@@ -6,17 +6,17 @@ module dual_word_ram #(
 ) (
     input wire clk,
 
-    input wire [ADDR_WIDTH-1:0] addr_1,
-    input wire [31:0] wdata_1,
-    input wire [3:0] wenable_1,
-    output wire [31:0] rdata_1,
+    input  wire [ADDR_WIDTH-1:0] addr_1,
+    input  wire [          31:0] wdata_1,
+    input  wire [           3:0] wenable_1,
+    output wire [          31:0] rdata_1,
 
-    input wire [ADDR_WIDTH-1:0] addr_2,
-    output wire [31:0] rdata_2
+    input  wire [ADDR_WIDTH-1:0] addr_2,
+    output wire [          31:0] rdata_2
 );
   localparam ADDR_WIDTH = $clog2(SIZE);
 
-  reg [31:0] mem[0:SIZE-1];
+  reg [31:0] data[0:SIZE-1];
 
   wire [29:0] word_addr_1 = addr_1[ADDR_WIDTH-1:2];
   wire [1:0] offset_1 = addr_1[1:0];
@@ -27,7 +27,7 @@ module dual_word_ram #(
   reg [31:0] wvalue;
 
   always @(*) begin
-    wvalue = mem[word_addr_1];
+    wvalue = data[word_addr_1];
 
     if (wenable_1[0]) wvalue[7+(8*offset_1)-:8] = wdata_1[7:0];
     if (wenable_1[1]) wvalue[15+(8*offset_1)-:8] = wdata_1[15:8];
@@ -36,13 +36,13 @@ module dual_word_ram #(
   end
 
   always @(posedge clk) begin
-    if (|wenable_1) mem[word_addr_1] <= wvalue;
+    if (|wenable_1) data[word_addr_1] <= wvalue;
   end
 
-  assign rdata_1 = mem[word_addr_1] >> (8 * offset_1);
-  assign rdata_2 = mem[word_addr_2] >> (8 * offset_2);
+  assign rdata_1 = data[word_addr_1] >> (8 * offset_1);
+  assign rdata_2 = data[word_addr_2] >> (8 * offset_2);
 
   initial begin
-    $readmemh(SOURCE_FILE, mem);
+    $readmemh(SOURCE_FILE, data);
   end
 endmodule

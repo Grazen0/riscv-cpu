@@ -9,12 +9,6 @@ module top_scc_tb ();
   wire [1:0] lcd_ctrl;
   wire lcd_enable;
 
-  always @(posedge clk or posedge rst_n) begin
-    #1;
-    // $display("pc = %h, t2 = %h, mem = %h %h %h %h", t.instr_addr, t.c.register_file.regs[7],
-    //          t.ram.mem[0], t.ram.mem[1], t.ram.mem[2], t.ram.mem[3]);
-  end
-
   top_scc top (
       .clk  (clk),
       .rst_n(rst_n),
