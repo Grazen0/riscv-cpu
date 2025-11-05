@@ -123,10 +123,8 @@ __attribute__((interrupt)) void irq_handler(void)
 
 void start(void)
 {
-    audio_init();
-
-    AUDIO->half_period = NOTE_NONE;
     VCTRL->display_on = false;
+    audio_init();
 
     video_clear_vram();
     video_set_palette(palette_data);
