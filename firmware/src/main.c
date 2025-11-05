@@ -145,12 +145,16 @@ void start(void)
     set_tile(snake[0], COLOR_WHITE);
     set_tile(apple, COLOR_RED);
 
+    rand_seed();
+
     VCTRL->display_on = true;
     enable_irq = true;
 }
 
 void loop(void)
 {
+    rand_get(); // Update randomness
+
     const u8 joypad = JOYPAD;
 
     if (snake_dir != DIR_DOWN && (joypad & JP_UP) != 0)

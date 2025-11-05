@@ -52,13 +52,15 @@ constexpr size_t PALETTE_BASE = 0x8000'0000;
 constexpr size_t VCTRL_BASE = 0xA000'0000;
 constexpr size_t AUDIO_BASE = 0xE000'0000;
 constexpr size_t JOYPAD_BASE = 0x6000'0000;
+constexpr size_t TRNG_BASE = 0x4000'0000;
 
 #define LCD ((LcdScreen *)LCD_BASE)
-#define VPALETTE ((u16 *)PALETTE_BASE)
+#define VPALETTE ((volatile u16 *)PALETTE_BASE)
 #define VRAM ((volatile u8 *)VRAM_BASE)
 #define VCTRL ((VideoControl *)VCTRL_BASE)
 #define AUDIO ((AudioUnit *)AUDIO_BASE)
 #define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
+#define TRNG (*(volatile u32 *)TRNG_BASE)
 
 constexpr u8 JP_CENTER = 1 << 0;
 constexpr u8 JP_UP = 1 << 1;
@@ -87,5 +89,9 @@ void audio_init(void);
 void audio_tick(void);
 
 void audio_play_note(MusicNote note, size_t duration);
+
+void rand_seed(void);
+
+u64 rand_get(void);
 
 #endif

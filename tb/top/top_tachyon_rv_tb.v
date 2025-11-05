@@ -4,21 +4,21 @@ module top_tachyon_rv_tb ();
   reg clk, rst_n;
   always #5 clk = ~clk;
 
-  reg [4:0] joypad;
+  reg  [4:0] joypad;
 
   wire [3:0] vga_red;
   wire [3:0] vga_green;
   wire [3:0] vga_blue;
-  wire h_sync;
-  wire v_sync;
+  wire       h_sync;
+  wire       v_sync;
 
   wire [7:0] lcd_data;
   wire [1:0] lcd_ctrl;
-  wire lcd_enable;
+  wire       lcd_enable;
 
-  wire audio_out;
+  wire       audio_out;
 
-  top_tachyon_rv tachy (
+  top_tachyon_rv top (
       .clk  (clk),
       .rst_n(rst_n),
 
@@ -28,11 +28,11 @@ module top_tachyon_rv_tb ();
       .lcd_ctrl  (lcd_ctrl),
       .lcd_enable(lcd_enable),
 
-      .vga_red(vga_red),
+      .vga_red  (vga_red),
       .vga_green(vga_green),
-      .vga_blue(vga_blue),
-      .h_sync(h_sync),
-      .v_sync(v_sync),
+      .vga_blue (vga_blue),
+      .h_sync   (h_sync),
+      .v_sync   (v_sync),
 
       .audio_out(audio_out)
   );
@@ -48,7 +48,7 @@ module top_tachyon_rv_tb ();
     rst_n = 0;
     #1 rst_n = 1;
 
-    #300_000;
+    #400_000;
     $display("");
     $display("");
 

@@ -20,12 +20,13 @@ module tachyon_rv (
     output wire audio_out
 );
   localparam SEL_RAM = 3'd0;
-  localparam SEL_VRAM = 3'd1;
-  localparam SEL_JOYPAD = 3'd2;
-  localparam SEL_VIDEO_PALETTE = 3'd3;
-  localparam SEL_VIDEO_REGS = 3'd4;
-  localparam SEL_LCD = 3'd5;
-  localparam SEL_AUDIO = 3'd6;
+  localparam SEL_OSCILLATOR = 3'd1;
+  localparam SEL_VRAM = 3'd2;
+  localparam SEL_JOYPAD = 3'd3;
+  localparam SEL_VIDEO_PALETTE = 3'd4;
+  localparam SEL_VIDEO_REGS = 3'd5;
+  localparam SEL_LCD = 3'd6;
+  localparam SEL_AUDIO = 3'd7;
 
   wire [31:0] instr_data;
   wire [31:0] instr_addr;
@@ -33,6 +34,13 @@ module tachyon_rv (
   wire [31:0] data_addr, data_wdata;
   wire [ 3:0] data_wenable;
   wire [31:0] mem_rdata;
+
+  wire [31:0] trng_rdata;
+
+  trng seija (
+      .clk(clk),
+      .out(trng_rdata)
+  );
 
   dual_word_ram #(
       .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem")
@@ -53,7 +61,8 @@ module tachyon_rv (
 
   always @(*) begin
     casez (data_addr[31:29])
-      3'b00z:  data_select = SEL_RAM;
+      3'b000:  data_select = SEL_RAM;
+      3'b001:  data_select = SEL_OSCILLATOR;
       3'b010:  data_select = SEL_VRAM;
       3'b011:  data_select = SEL_JOYPAD;
       3'b100:  data_select = SEL_VIDEO_PALETTE;
@@ -65,10 +74,11 @@ module tachyon_rv (
 
     case (data_select)
       SEL_RAM:           data_rdata = mem_rdata;
-      SEL_VRAM:          data_rdata = vram_rdata;
-      SEL_JOYPAD:        data_rdata = joypad;
-      SEL_VIDEO_PALETTE: data_rdata = palette_rdata;
-      SEL_LCD:           data_rdata = lcd_data;
+      SEL_OSCILLATOR:    data_rdata = trng_rdata;
+      SEL_VRAM:          data_rdata = {24'b0, vram_rdata};
+      SEL_JOYPAD:        data_rdata = {27'b0, joypad};
+      SEL_VIDEO_PALETTE: data_rdata = {21'b0, palette_rdata};
+      SEL_LCD:           data_rdata = {24'b0, lcd_data};
       SEL_AUDIO:         data_rdata = audio_rdata;
       default:           data_rdata = {32{1'bx}};
     endcase
@@ -92,7 +102,7 @@ module tachyon_rv (
   wire [ 7:0] vram_rdata;
   wire [11:0] palette_rdata;
 
-  video_unit aya (
+  video_unit keiki (
       .clk  (clk_vga),
       .wclk (clk),
       .rst_n(rst_n),
