@@ -99,21 +99,21 @@ module pl_interrupt_control (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .irq(irq),
-      .ack(ack),
+      .irq        (irq),
+      .ack        (ack),
       .irq_pending(irq_pending)
   );
 
   always @(*) begin
-    flush_m = 0;
-    flush_e = 0;
-    flush_d = 0;
-    stall_e = 0;
-    stall_d = 0;
-    stall_f = 0;
+    flush_m     = 0;
+    flush_e     = 0;
+    flush_d     = 0;
+    stall_e     = 0;
+    stall_d     = 0;
+    stall_f     = 0;
 
-    ack = 0;
-    trap_pc = 0;
+    ack         = 0;
+    trap_pc     = 0;
     trap_stages = 0;
 
     case (state)
@@ -122,32 +122,32 @@ module pl_interrupt_control (
 
         if (irq_pending) begin
           trap_stages = 1;
-          flush_m = 1;
-          stall_e = 1;
-          stall_d = 1;
-          stall_f = 1;
+          flush_m     = 1;
+          stall_e     = 1;
+          stall_d     = 1;
+          stall_f     = 1;
 
-          ack = 1;
-          next_state = S_WAIT1;
+          ack         = 1;
+          next_state  = S_WAIT1;
         end
       end
       S_WAIT1: begin
         trap_stages = 1;
-        flush_m = 1;
-        stall_e = 1;
-        stall_d = 1;
-        stall_f = 1;
+        flush_m     = 1;
+        stall_e     = 1;
+        stall_d     = 1;
+        stall_f     = 1;
 
-        next_state = S_WAIT2;
+        next_state  = S_WAIT2;
       end
       S_WAIT2: begin
         trap_stages = 1;
-        flush_m = 1;
-        flush_e = 1;
-        flush_d = 1;
+        flush_m     = 1;
+        flush_e     = 1;
+        flush_d     = 1;
 
-        trap_pc = 1;
-        next_state = S_IDLE;
+        trap_pc     = 1;
+        next_state  = S_IDLE;
       end
     endcase
   end
@@ -262,7 +262,7 @@ module pipelined_cpu (
     end else begin
       case (pc_src_e)
         `PC_SRC_STEP:    pc_next = pc_plus_4_f;
-        `PC_SRC_JUMP:    pc_next = pc_target_e;
+        `PC_SRC_TARGET:    pc_next = pc_target_e;
         `PC_SRC_ALU:     pc_next = alu_result_e & ~1;
         `PC_SRC_CURRENT: pc_next = pc_f;
         default:         pc_next = {32{1'bx}};

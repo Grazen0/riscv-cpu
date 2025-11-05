@@ -1,7 +1,6 @@
 #include "num.h"
 #include "tachyon.h"
 #include <stddef.h>
-#include <stdint.h>
 
 typedef enum : u8 {
     COLOR_BLACK = 0,
@@ -10,19 +9,12 @@ typedef enum : u8 {
     COLOR_WHITE = 3,
 } Color;
 
-static const uint16_t palette_data[] = {
+static constexpr u16 palette_data[] = {
     0x000, // black
     0xF00, // red
     0x0F0, // green
     0xFFF, // white
 };
-
-#define FREQ_TO_HALF_PERIOD(freq) (100'000'000U / (2 * freq));
-
-static constexpr size_t NOTE_NONE = 0;
-static constexpr size_t NOTE_A4 = FREQ_TO_HALF_PERIOD(392);
-
-static bool enable_irq = false;
 
 typedef enum : u8 {
     DIR_UP,
@@ -32,20 +24,14 @@ typedef enum : u8 {
 } Direction;
 
 typedef struct {
-    uint8_t y;
-    uint8_t x;
+    u8 y;
+    u8 x;
 } Position;
 
 static inline bool pos_equals(const Position a, const Position b)
 {
     return a.x == b.x && a.y == b.y;
 }
-
-static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H_VISIBLE * VIDEO_TILES_V;
-static Position snake[SNAKE_CAPACITY];
-static size_t snake_size;
-static Direction snake_dir;
-static Position apple;
 
 static void set_tile(const Position tile_pos, const u8 color)
 {
@@ -54,15 +40,21 @@ static void set_tile(const Position tile_pos, const u8 color)
     const size_t byte_idx = tile_idx / 4;
     const size_t rem = tile_idx % 4;
 
-    const u8 cur_byte = VRAM->data[byte_idx];
+    const u8 cur_byte = VRAM[byte_idx];
     const size_t bit_offset = 2 * rem;
 
-    VRAM->data[byte_idx] = (cur_byte & ~(0b11 << bit_offset)) | (color << bit_offset);
+    VRAM[byte_idx] = (cur_byte & ~(0b11 << bit_offset)) | (color << bit_offset);
 }
 
-static Direction dir_next = DIR_RIGHT;
+static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H_VISIBLE * VIDEO_TILES_V;
 
-static void game_tick(void)
+static Position snake[SNAKE_CAPACITY];
+static size_t snake_size;
+static Direction snake_dir;
+static Direction dir_next;
+static Position apple;
+
+static inline void game_step(void)
 {
     snake_dir = dir_next;
 
@@ -87,39 +79,54 @@ static void game_tick(void)
     }
 
     if (pos_equals(snake[0], apple)) {
-        ++apple.y;
+        // Ate an apple
         ++snake_size;
         snake[snake_size - 1] = prev_tail;
 
+        // We need a new apple
+        ++apple.y;
         set_tile(apple, COLOR_RED);
+
+        audio_play_note(NOTE_A4, 2);
     } else {
         set_tile(prev_tail, COLOR_BLACK);
     }
 
-    AUDIO->half_period = snake[0].x;
     set_tile(snake[0], COLOR_WHITE);
 }
 
+static inline void game_tick(void)
+{
+    static constexpr size_t STEP_DELAY = 1;
+    static size_t step_timer = 0;
+
+    ++step_timer;
+
+    if (step_timer >= STEP_DELAY) {
+        step_timer = 0;
+        game_step();
+    }
+}
+
+static bool enable_irq = false;
+
 __attribute__((interrupt)) void irq_handler(void)
 {
-    static constexpr size_t TICK_DELAY = 36; // Half a second @ 72 Hz
-    static size_t timer = 0;
+    static size_t audio_timer;
 
     if (!enable_irq)
         return;
 
-    ++timer;
-
-    if (timer >= TICK_DELAY) {
-        timer = 0;
-        game_tick();
-    }
+    audio_tick();
+    game_tick();
 }
 
 void start(void)
 {
-    AUDIO->half_period = NOTE_A4;
-    VREGS->display_on = false;
+    audio_init();
+
+    AUDIO->half_period = NOTE_NONE;
+    VCTRL->display_on = false;
 
     video_clear_vram();
     video_set_palette(palette_data);
@@ -138,13 +145,13 @@ void start(void)
     set_tile(snake[0], COLOR_WHITE);
     set_tile(apple, COLOR_RED);
 
-    VREGS->display_on = true;
+    VCTRL->display_on = true;
     enable_irq = true;
 }
 
 void loop(void)
 {
-    const u8 joypad = JOYPAD->data;
+    const u8 joypad = JOYPAD;
 
     if (snake_dir != DIR_DOWN && (joypad & JP_UP) != 0)
         dir_next = DIR_UP;

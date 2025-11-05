@@ -1,19 +1,18 @@
 #include "tachyon.h"
 #include "num.h"
 #include <stddef.h>
-#include <stdint.h>
 #include <string.h>
 
-void video_set_palette(const uint16_t palette[])
+void video_set_palette(const u16 palette[])
 {
     for (size_t i = 0; i < 4; ++i)
-        PALETTE->data[i] = palette[i];
+        VPALETTE[i] = palette[i];
 }
 
 void video_clear_vram(void)
 {
     for (size_t i = 0; i < VIDEO_VRAM_SIZE; ++i)
-        VRAM->data[i] = 0;
+        VRAM[i] = 0;
 }
 
 void lcd_send_instr(const u8 instr)
@@ -71,4 +70,29 @@ void lcd_print_hex(u32 n)
         const u8 nib = (n >> (4 * (7 - i))) & 0xF;
         lcd_print_char(nib < 10 ? '0' + nib : 'A' + (nib - 10));
     }
+}
+
+static size_t audio_timer = 0;
+
+void audio_init(void)
+{
+    audio_timer = 0;
+    AUDIO->half_period = NOTE_NONE;
+}
+
+void audio_tick(void)
+{
+    if (audio_timer == 0)
+        return;
+
+    --audio_timer;
+
+    if (audio_timer == 0)
+        AUDIO->half_period = NOTE_NONE;
+}
+
+void audio_play_note(const MusicNote note, const size_t duration)
+{
+    AUDIO->half_period = note;
+    audio_timer = duration;
 }

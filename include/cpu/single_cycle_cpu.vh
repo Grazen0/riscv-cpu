@@ -10,7 +10,7 @@
 `define ALU_SRC_B_A1 2'd3
 
 `define PC_SRC_STEP 2'd0
-`define PC_SRC_JUMP 2'd1
+`define PC_SRC_TARGET 2'd1
 `define PC_SRC_ALU 2'd2
 `define PC_SRC_CURRENT 2'd3
 

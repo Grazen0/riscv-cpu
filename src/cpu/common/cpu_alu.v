@@ -7,12 +7,12 @@ module cpu_alu (
     input wire [31:0] src_b,
     input wire [ 3:0] control,
 
-    output reg signed [31:0] result,
-    output reg carry,
-    output reg borrow,
-    output wire zero,
-    output reg overflow,
-    output reg lt
+    output reg  [31:0] result,
+    output reg         carry,
+    output reg         borrow,
+    output wire        zero,
+    output reg         overflow,
+    output reg         lt
 );
   wire signed [31:0] src_a_signed = src_a;
   wire signed [31:0] src_b_signed = src_b;
@@ -26,12 +26,15 @@ module cpu_alu (
     lt       = 0;
 
     casez (control)
-      `ALU_ADD: {carry, result} = {1'b0, src_a} + {1'b0, src_b};
+      `ALU_ADD: begin
+        {carry, result} = {1'b0, src_a} + {1'b0, src_b};
+        overflow = (src_a[31] != src_b[31]) && (result[31] != src_a[31]);
+      end
       `ALU_SUB: begin
         {carry, result} = {1'b1, src_a} - {1'b0, src_b};
         borrow = ~carry;
         overflow = (src_a[31] != src_b[31]) && (result[31] != src_a[31]);
-        lt = (result[31] ^ overflow);
+        lt = result[31] ^ overflow;
       end
       `ALU_SLL: result = src_a << shamt;
       `ALU_SLT: result = {31'b0, src_a_signed < src_b_signed};
@@ -48,5 +51,5 @@ module cpu_alu (
     endcase
   end
 
-  assign zero = src_a == src_b;  // Lower delay than result == 0
+  assign zero = result == 0;
 endmodule

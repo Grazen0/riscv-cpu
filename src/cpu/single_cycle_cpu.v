@@ -153,18 +153,18 @@ module scc_branch_logic (
     case (branch_type)
       `BRANCH_NONE: pc_src = `PC_SRC_STEP;
       `BRANCH_JALR: pc_src = `PC_SRC_ALU;
-      `BRANCH_JAL: pc_src = `PC_SRC_JUMP;
+      `BRANCH_JAL: pc_src = `PC_SRC_TARGET;
       `BRANCH_BREAK: pc_src = `PC_SRC_CURRENT;
       `BRANCH_COND: begin
         pc_src = `PC_SRC_STEP;
 
         case (funct3)
-          3'b000:  if (alu_zero) pc_src = `PC_SRC_JUMP;  // beq
-          3'b001:  if (!alu_zero) pc_src = `PC_SRC_JUMP;  // bne
-          3'b100:  if (alu_lt) pc_src = `PC_SRC_JUMP;  // blt
-          3'b101:  if (!alu_lt) pc_src = `PC_SRC_JUMP;  // bge
-          3'b110:  if (alu_borrow) pc_src = `PC_SRC_JUMP;  // bltu
-          3'b111:  if (!alu_borrow) pc_src = `PC_SRC_JUMP;  // bgeu
+          3'b000:  if (alu_zero) pc_src = `PC_SRC_TARGET;  // beq
+          3'b001:  if (!alu_zero) pc_src = `PC_SRC_TARGET;  // bne
+          3'b100:  if (alu_lt) pc_src = `PC_SRC_TARGET;  // blt
+          3'b101:  if (!alu_lt) pc_src = `PC_SRC_TARGET;  // bge
+          3'b110:  if (alu_borrow) pc_src = `PC_SRC_TARGET;  // bltu
+          3'b111:  if (!alu_borrow) pc_src = `PC_SRC_TARGET;  // bgeu
           default: pc_src = {2'bxx};
         endcase
       end
@@ -347,7 +347,7 @@ module single_cycle_cpu (
   always @(*) begin
     case (pc_src)
       `PC_SRC_STEP:    pc_next = pc_plus_4;
-      `PC_SRC_JUMP:    pc_next = pc_target;
+      `PC_SRC_TARGET:    pc_next = pc_target;
       `PC_SRC_ALU:     pc_next = alu_result & ~1;
       `PC_SRC_CURRENT: pc_next = pc;
       default:         pc_next = {32{1'bx}};
