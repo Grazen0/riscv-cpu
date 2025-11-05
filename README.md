@@ -22,11 +22,10 @@ You'll need the following dependencies:
 - xxd
 - `riscv32-none-elf-gcc` and friends (the [GNU Toolchain for RISC-V](https://github.com/riscv-collab/riscv-gnu-toolchain))
 
-You can run, for example, the testbench for the pipelined CPU with the following
-command:
+You can run, for example, the main testbench with the following command:
 
 ```bash
-make wave TB=top/top_pl_tb
+make wave TB=top/top_tachyon_rv_tb
 ```
 
 Since the top modules are designed to print to an LCD screen, the testbenches
@@ -34,23 +33,24 @@ will print characters to the terminal as they would appear on the LCD.
 
 ## System specs
 
-This system is expected to run under a 100 MHz clock.
-
 ### Memory map
 
 The memory map for **data memory** is as follows:
 
-|        Address range        |  Description  | Size (bytes) |
-| :-------------------------: | :-----------: | :----------: |
-| `0x0000_0000 - 0x0000_1000` |      RAM      |    16384     |
-| `0xC000_0000 - 0xC000_0008` | Video palette |      8       |
-| `0xD000_0000 - 0xD000_0080` |   Video RAM   |     128      |
-|        `0xE000'0000`        |   LCD ctrl    |      1       |
-|        `0xE000'0001`        |   LCD data    |      1       |
+|  Range start  | Size (bytes) |     Description      |
+| :-----------: | :----------: | :------------------: |
+| `0x0000'0000` |    16384     | Instruction/data RAM |
+| `0x2000'0000` |      4       |      TRNG value      |
+| `0x4000'0000` |     128      |      Video RAM       |
+| `0x6000'0000` |      1       |        Joypad        |
+| `0x8000'0000` |      8       |    Video palette     |
+| `0xA000'0000` |      1       |     Video on/off     |
+| `0xC000'0000` |      1       |       LCD ctrl       |
+| `0xC000'0001` |      1       |       LCD data       |
+| `0xE000'0000` |      4       |    Audio control     |
 
 All memory ranges left unspecified can be assumed to be mirrors of the rest,
 though they should not be used.
 
-On the other hand, the **instruction memory** lines are hardwired to the program
-ROM and nothing else, so instructions will never be read from anywhere other
-than ROM data.
+On the other hand, the **instruction memory** lines are hardwired to RAM and
+nothing else, so instructions will never be read from anywhere other than RAM.
