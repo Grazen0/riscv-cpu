@@ -29,7 +29,7 @@ typedef struct {
         volatile u8 status;
     };
     volatile u8 data;
-} LcdScreen;
+} Lcd;
 
 typedef struct {
     volatile bool display_on;
@@ -37,14 +37,7 @@ typedef struct {
 
 typedef struct {
     volatile u32 half_period;
-} AudioUnit;
-
-#define FREQ_TO_HALF_PERIOD(freq) (CLOCK_FREQ / (2 * freq))
-
-typedef enum : size_t {
-    NOTE_NONE = 0,
-    NOTE_A4 = FREQ_TO_HALF_PERIOD(392),
-} MusicNote;
+} AudioControl;
 
 constexpr u8 JP_CENTER = 1 << 0;
 constexpr u8 JP_UP = 1 << 1;
@@ -58,40 +51,14 @@ constexpr size_t JOYPAD_BASE = 0x6000'0000;
 constexpr size_t VPALETTE_BASE = 0x8000'0000;
 constexpr size_t VCTRL_BASE = 0xA000'0000;
 constexpr size_t LCD_BASE = 0xC000'0000;
-constexpr size_t AUDIO_BASE = 0xE000'0000;
+constexpr size_t AUDIOCTRL_BASE = 0xE000'0000;
 
 #define TRNG (*(volatile u32 *)TRNG_BASE)
 #define VRAM ((volatile u8 *)VRAM_BASE)
 #define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
 #define VPALETTE ((volatile u16 *)VPALETTE_BASE)
 #define VCTRL ((VideoControl *)VCTRL_BASE)
-#define LCD ((LcdScreen *)LCD_BASE)
-#define AUDIO ((AudioUnit *)AUDIO_BASE)
-
-void lcd_send_instr(u8 instr);
-
-void lcd_print_char(char c);
-
-void lcd_print(const char *restrict s);
-
-void lcd_print_n(const char *restrict s, size_t size);
-
-void lcd_print_int(int n);
-
-void lcd_print_hex(u32 n);
-
-void video_set_palette(const u16 palette[]);
-
-void video_clear_vram(void);
-
-void audio_init(void);
-
-void audio_tick(void);
-
-void audio_play_note(MusicNote note, size_t duration);
-
-void rand_seed(void);
-
-u64 rand_get(void);
+#define LCD ((Lcd *)LCD_BASE)
+#define AUDIOCTRL ((AudioControl *)AUDIOCTRL_BASE)
 
 #endif

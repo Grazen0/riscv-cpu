@@ -1,4 +1,5 @@
 #include "num.h"
+#include "tachylib.h"
 #include "tachyon.h"
 #include <stddef.h>
 
