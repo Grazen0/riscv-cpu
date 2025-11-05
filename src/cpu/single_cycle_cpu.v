@@ -108,7 +108,7 @@ module scc_control (
       7'b1110011: begin
         if (funct3 == 3'b000) begin  // mret
           trap_mret = 1;
-        end else if (funct3 == 3'b001) begin  // csrrw
+        end else begin  // csr instructions
           imm_src   = `IMM_SRC_I;
 
           alu_src_a = `ALU_SRC_A_CSR;
@@ -128,8 +128,6 @@ module scc_control (
           regw_src   = `REGW_SRC_CSR;  // Write CSR to register
           reg_write  = 1;
           csr_write  = 1;
-        end else begin
-          branch_type = `BRANCH_BREAK;
         end
       end
       default: begin
@@ -347,7 +345,7 @@ module single_cycle_cpu (
   always @(*) begin
     case (pc_src)
       `PC_SRC_STEP:    pc_next = pc_plus_4;
-      `PC_SRC_TARGET:    pc_next = pc_target;
+      `PC_SRC_TARGET:  pc_next = pc_target;
       `PC_SRC_ALU:     pc_next = alu_result & ~1;
       `PC_SRC_CURRENT: pc_next = pc;
       default:         pc_next = {32{1'bx}};

@@ -46,27 +46,27 @@ typedef enum : size_t {
     NOTE_A4 = FREQ_TO_HALF_PERIOD(392),
 } MusicNote;
 
-constexpr size_t LCD_BASE = 0xC000'0000;
-constexpr size_t VRAM_BASE = 0x4000'0000;
-constexpr size_t PALETTE_BASE = 0x8000'0000;
-constexpr size_t VCTRL_BASE = 0xA000'0000;
-constexpr size_t AUDIO_BASE = 0xE000'0000;
-constexpr size_t JOYPAD_BASE = 0x6000'0000;
-constexpr size_t TRNG_BASE = 0x4000'0000;
-
-#define LCD ((LcdScreen *)LCD_BASE)
-#define VPALETTE ((volatile u16 *)PALETTE_BASE)
-#define VRAM ((volatile u8 *)VRAM_BASE)
-#define VCTRL ((VideoControl *)VCTRL_BASE)
-#define AUDIO ((AudioUnit *)AUDIO_BASE)
-#define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
-#define TRNG (*(volatile u32 *)TRNG_BASE)
-
 constexpr u8 JP_CENTER = 1 << 0;
 constexpr u8 JP_UP = 1 << 1;
 constexpr u8 JP_LEFT = 1 << 2;
 constexpr u8 JP_RIGHT = 1 << 3;
 constexpr u8 JP_DOWN = 1 << 4;
+
+constexpr size_t TRNG_BASE = 0x2000'0000;
+constexpr size_t VRAM_BASE = 0x4000'0000;
+constexpr size_t JOYPAD_BASE = 0x6000'0000;
+constexpr size_t VPALETTE_BASE = 0x8000'0000;
+constexpr size_t VCTRL_BASE = 0xA000'0000;
+constexpr size_t LCD_BASE = 0xC000'0000;
+constexpr size_t AUDIO_BASE = 0xE000'0000;
+
+#define TRNG (*(volatile u32 *)TRNG_BASE)
+#define VRAM ((volatile u8 *)VRAM_BASE)
+#define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
+#define VPALETTE ((volatile u16 *)VPALETTE_BASE)
+#define VCTRL ((VideoControl *)VCTRL_BASE)
+#define LCD ((LcdScreen *)LCD_BASE)
+#define AUDIO ((AudioUnit *)AUDIO_BASE)
 
 void lcd_send_instr(u8 instr);
 

@@ -24,8 +24,8 @@ typedef enum : u8 {
 } Direction;
 
 typedef struct {
-    u8 y;
     u8 x;
+    u8 y;
 } Position;
 
 static inline bool pos_equals(const Position a, const Position b)
@@ -97,7 +97,7 @@ static inline void game_step(void)
 
 static inline void game_tick(void)
 {
-    static constexpr size_t STEP_DELAY = 1;
+    static constexpr size_t STEP_DELAY = 36;
     static size_t step_timer = 0;
 
     ++step_timer;

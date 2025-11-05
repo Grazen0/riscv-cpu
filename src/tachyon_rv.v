@@ -20,11 +20,11 @@ module tachyon_rv (
     output wire audio_out
 );
   localparam SEL_RAM = 3'd0;
-  localparam SEL_OSCILLATOR = 3'd1;
+  localparam SEL_TRNG = 3'd1;
   localparam SEL_VRAM = 3'd2;
   localparam SEL_JOYPAD = 3'd3;
-  localparam SEL_VIDEO_PALETTE = 3'd4;
-  localparam SEL_VIDEO_REGS = 3'd5;
+  localparam SEL_VPALETTE = 3'd4;
+  localparam SEL_VCTRL = 3'd5;
   localparam SEL_LCD = 3'd6;
   localparam SEL_AUDIO = 3'd7;
 
@@ -44,7 +44,7 @@ module tachyon_rv (
 
   dual_word_ram #(
       .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem")
-  ) ram (
+  ) patchy (
       .clk(clk),
 
       .addr_1   (data_addr[11:0]),
@@ -62,25 +62,25 @@ module tachyon_rv (
   always @(*) begin
     casez (data_addr[31:29])
       3'b000:  data_select = SEL_RAM;
-      3'b001:  data_select = SEL_OSCILLATOR;
+      3'b001:  data_select = SEL_TRNG;
       3'b010:  data_select = SEL_VRAM;
       3'b011:  data_select = SEL_JOYPAD;
-      3'b100:  data_select = SEL_VIDEO_PALETTE;
-      3'b101:  data_select = SEL_VIDEO_REGS;
+      3'b100:  data_select = SEL_VPALETTE;
+      3'b101:  data_select = SEL_VCTRL;
       3'b110:  data_select = SEL_LCD;
       3'b111:  data_select = SEL_AUDIO;
       default: data_select = {32{1'bx}};
     endcase
 
     case (data_select)
-      SEL_RAM:           data_rdata = mem_rdata;
-      SEL_OSCILLATOR:    data_rdata = trng_rdata;
-      SEL_VRAM:          data_rdata = {24'b0, vram_rdata};
-      SEL_JOYPAD:        data_rdata = {27'b0, joypad};
-      SEL_VIDEO_PALETTE: data_rdata = {21'b0, palette_rdata};
-      SEL_LCD:           data_rdata = {24'b0, lcd_data};
-      SEL_AUDIO:         data_rdata = audio_rdata;
-      default:           data_rdata = {32{1'bx}};
+      SEL_RAM:      data_rdata = mem_rdata;
+      SEL_TRNG:     data_rdata = trng_rdata;
+      SEL_VRAM:     data_rdata = {24'b0, vram_rdata};
+      SEL_JOYPAD:   data_rdata = {27'b0, joypad};
+      SEL_VPALETTE: data_rdata = {20'b0, palette_rdata};
+      SEL_LCD:      data_rdata = {24'b0, lcd_data};
+      SEL_AUDIO:    data_rdata = audio_rdata;
+      default:      data_rdata = {32{1'bx}};
     endcase
   end
 
@@ -114,11 +114,11 @@ module tachyon_rv (
 
       .palette_addr   (data_addr[2:1]),
       .palette_wdata  (data_wdata[11:0]),
-      .palette_wenable(&data_wenable[1:0] && data_select == SEL_VIDEO_PALETTE),
+      .palette_wenable(&data_wenable[1:0] && data_select == SEL_VPALETTE),
       .palette_rdata  (palette_rdata),
 
       .regs_wdata  (data_wdata[0]),
-      .regs_wenable(data_wenable[0] && data_select == SEL_VIDEO_REGS),
+      .regs_wenable(data_wenable[0] && data_select == SEL_VCTRL),
 
       .vga_red  (vga_red),
       .vga_green(vga_green),
