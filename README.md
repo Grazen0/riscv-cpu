@@ -45,9 +45,15 @@ The memory map for **data memory** is as follows:
 | `0x6000'0000` |      1       |        Joypad        |
 | `0x8000'0000` |      8       |    Video palette     |
 | `0xA000'0000` |      1       |     Video on/off     |
-| `0xC000'0000` |      1       |       LCD ctrl       |
-| `0xC000'0001` |      1       |       LCD data       |
+| `0xC000'0000` |      2       |         LCD          |
 | `0xE000'0000` |      4       |    Audio control     |
+
+LCD section:
+
+|  Range start  | Size (bytes) | Description |
+| :-----------: | :----------: | :---------: |
+| `0xC000'0000` |      1       |  LCD ctrl   |
+| `0xC000'0001` |      1       |  LCD data   |
 
 All memory ranges left unspecified can be assumed to be mirrors of the rest,
 though they should not be used.
