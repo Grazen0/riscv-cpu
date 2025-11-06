@@ -6,21 +6,21 @@ module video_unit (
     input wire wclk,
     input wire rst_n,
 
-    input wire [$clog2(VRAM_SIZE)-1:0] vram_addr,
-    input wire [7:0] vram_wdata,
-    input wire vram_wenable,
-    output wire [7:0] vram_rdata,
+    input wire [$clog2(TATTR_SIZE)-1:0] tattr_addr,
+    input wire [7:0] tattr_wdata,
+    input wire tattr_wenable,
+    output wire [7:0] tattr_rdata,
 
-    input wire [$clog2(2 * TD_SIZE)-1:0] tdata_addr,
+    input wire [$clog2(2 * TDATA_SIZE)-1:0] tdata_addr,
     input wire [15:0] tdata_wdata,
     input wire [1:0] tdata_wenable,
     output wire [15:0] tdata_rdata,
 
 
-    input  wire [ 3:0] palette_addr,
-    input  wire [11:0] palette_wdata,
-    input  wire        palette_wenable,
-    output wire [11:0] palette_rdata,
+    input  wire [ 3:0] pal_addr,
+    input  wire [11:0] pal_wdata,
+    input  wire        pal_wenable,
+    output wire [11:0] pal_rdata,
 
     input wire ctrl_wdata,
     input wire ctrl_wenable,
@@ -46,37 +46,37 @@ module video_unit (
   reg display_on;
   reg [11:0] palette[0:3][0:3];
 
-  assign palette_rdata = palette[palette_addr[3:2]][palette_addr[1:0]];
+  assign pal_rdata = palette[pal_addr[3:2]][pal_addr[1:0]];
 
   // 28 is nicer than 25. Produces some leftover tiles, but sacrifices must be made.
   localparam TILES_H = 28;
   localparam TILES_V = 18;
   localparam TILES_TOTAL = TILES_H * TILES_V;
-  localparam VRAM_SIZE = 2 ** $clog2(TILES_TOTAL);
+  localparam TATTR_SIZE = 2 ** $clog2(TILES_TOTAL);
 
   localparam TD_TILES = 16;
-  localparam TD_SIZE = 8 * TD_TILES;
+  localparam TDATA_SIZE = 8 * TD_TILES;
 
-  wire [7:0] vram_show_data;
+  wire [7:0] tile_attrs;
 
   dual_byte_ram #(
-      .SIZE(VRAM_SIZE)
-  ) vram (
+      .SIZE(TATTR_SIZE)
+  ) tattr_ram (
       .clk(wclk),
 
-      .addr_1   (vram_addr),
-      .wdata_1  (vram_wdata),
-      .wenable_1(vram_wenable),
-      .rdata_1  (vram_rdata),
+      .addr_1   (tattr_addr),
+      .wdata_1  (tattr_wdata),
+      .wenable_1(tattr_wenable),
+      .rdata_1  (tattr_rdata),
 
       .addr_2 (tile_idx),
-      .rdata_2(vram_show_data)
+      .rdata_2(tile_attrs)
   );
 
   wire [15:0] tdata_show_data;
 
   dual_hword_ram #(
-      .SIZE_HWORDS(TD_SIZE)
+      .SIZE_HWORDS(TDATA_SIZE)
   ) tdata_ram (
       .clk(wclk),
 
@@ -85,7 +85,7 @@ module video_unit (
       .wenable_1(tdata_wenable),
       .rdata_1  (tdata_rdata),
 
-      .addr_2 ({tdata_idx, flip_y ? (3'd7 - tile_y) : tile_y, 1'b0}),
+      .addr_2 ({tdata_idx, flip_x ? (3'd7 - tile_y) : tile_y, 1'b0}),
       .rdata_2(tdata_show_data)
   );
 
@@ -160,8 +160,8 @@ module video_unit (
     if (!rst_n) begin
       display_on <= 0;
     end else begin
-      if (palette_wenable) begin
-        palette[palette_addr[3:2]][palette_addr[1:0]] <= palette_wdata;
+      if (pal_wenable) begin
+        palette[pal_addr[3:2]][pal_addr[1:0]] <= pal_wdata;
       end
 
       if (ctrl_wenable) begin
@@ -192,15 +192,15 @@ module video_unit (
     end
   end
 
-  wire [ 3:0] tdata_idx = vram_show_data[3:0];
-  wire        pal_idx = vram_show_data[4];
-  wire        flip_x = vram_show_data[5];
-  wire        flip_y = vram_show_data[6];
+  wire [ 3:0] tdata_idx = tile_attrs[3:0];
+  wire        pal_idx = tile_attrs[4];
+  wire        flip_x = tile_attrs[5];
+  wire        flip_y = tile_attrs[6];
 
   wire [ 1:0] color_idx_noflip = {tdata_show_data[15-tile_x], tdata_show_data[7-tile_x]};
   wire [ 1:0] color_idx_yesflip = {tdata_show_data[8+tile_x], tdata_show_data[tile_x]};
 
-  wire [ 1:0] color_idx = flip_x ? color_idx_yesflip : color_idx_noflip;
+  wire [ 1:0] color_idx = flip_y ? color_idx_yesflip : color_idx_noflip;
   wire [11:0] cur_color = palette[pal_idx][color_idx];
 
   wire        visible = h_visible & v_visible;

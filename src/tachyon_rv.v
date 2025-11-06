@@ -19,14 +19,15 @@ module tachyon_rv (
 
     output wire audio_out
 );
-  localparam SEL_RAM = 3'd0;
-  localparam SEL_TRNG = 3'd1;
-  localparam SEL_VRAM = 3'd2;
-  localparam SEL_JOYPAD = 3'd3;
-  localparam SEL_VPALETTE = 3'd4;
-  localparam SEL_VCTRL = 3'd5;
-  localparam SEL_LCD = 3'd6;
-  localparam SEL_AUDIO = 3'd7;
+  localparam SEL_RAM = 4'd0;
+  localparam SEL_TRNG = 4'd1;
+  localparam SEL_VTATTR = 4'd2;
+  localparam SEL_VTDATA = 4'd3;
+  localparam SEL_JOYPAD = 4'd4;
+  localparam SEL_VPAL = 4'd5;
+  localparam SEL_VCTRL = 4'd6;
+  localparam SEL_LCD = 4'd7;
+  localparam SEL_AUDIO = 4'd8;
 
   wire [31:0] instr_data;
   wire [31:0] instr_addr;
@@ -56,31 +57,33 @@ module tachyon_rv (
       .rdata_2(instr_data)
   );
 
-  reg [ 2:0] data_select;
+  reg [ 3:0] data_select;
   reg [31:0] data_rdata;
 
   always @(*) begin
-    casez (data_addr[31:29])
-      3'b000:  data_select = SEL_RAM;
-      3'b001:  data_select = SEL_TRNG;
-      3'b010:  data_select = SEL_VRAM;
-      3'b011:  data_select = SEL_JOYPAD;
-      3'b100:  data_select = SEL_VPALETTE;
-      3'b101:  data_select = SEL_VCTRL;
-      3'b110:  data_select = SEL_LCD;
-      3'b111:  data_select = SEL_AUDIO;
+    casez (data_addr[31:28])
+      4'b000z: data_select = SEL_RAM;
+      4'b001z: data_select = SEL_TRNG;
+      4'b0100: data_select = SEL_VTATTR;
+      4'b0101: data_select = SEL_VTDATA;
+      4'b011z: data_select = SEL_JOYPAD;
+      4'b100z: data_select = SEL_VPAL;
+      4'b101z: data_select = SEL_VCTRL;
+      4'b110z: data_select = SEL_LCD;
+      4'b111z: data_select = SEL_AUDIO;
       default: data_select = {32{1'bx}};
     endcase
 
     case (data_select)
-      SEL_RAM:      data_rdata = mem_rdata;
-      SEL_TRNG:     data_rdata = trng_rdata;
-      SEL_VRAM:     data_rdata = {24'b0, vram_rdata};
-      SEL_JOYPAD:   data_rdata = {27'b0, joypad};
-      SEL_VPALETTE: data_rdata = {20'b0, palette_rdata};
-      SEL_LCD:      data_rdata = {24'b0, lcd_data};
-      SEL_AUDIO:    data_rdata = audio_rdata;
-      default:      data_rdata = {32{1'bx}};
+      SEL_RAM:    data_rdata = mem_rdata;
+      SEL_TRNG:   data_rdata = trng_rdata;
+      SEL_VTATTR: data_rdata = {24'b0, tattr_rdata};
+      SEL_VTDATA: data_rdata = {16'b0, tdata_rdata};
+      SEL_JOYPAD: data_rdata = {27'b0, joypad};
+      SEL_VPAL:   data_rdata = {20'b0, pal_rdata};
+      SEL_LCD:    data_rdata = {24'b0, lcd_data};
+      SEL_AUDIO:  data_rdata = audio_rdata;
+      default:    data_rdata = {32{1'bx}};
     endcase
   end
 
@@ -99,23 +102,29 @@ module tachyon_rv (
       .irq(~h_sync)
   );
 
-  wire [ 7:0] vram_rdata;
-  wire [11:0] palette_rdata;
+  wire [ 7:0] tattr_rdata;
+  wire [15:0] tdata_rdata;
+  wire [11:0] pal_rdata;
 
   video_unit keiki (
       .clk  (clk_vga),
       .wclk (clk),
       .rst_n(rst_n),
 
-      .vram_addr   (data_addr[8:0]),
-      .vram_wdata  (data_wdata[7:0]),
-      .vram_wenable(data_wenable[0] && data_select == SEL_VRAM),
-      .vram_rdata  (vram_rdata),
+      .tattr_addr(data_addr[8:0]),
+      .tattr_wdata(data_wdata[7:0]),
+      .tattr_wenable(data_wenable[0] && data_select == SEL_VTATTR),
+      .tattr_rdata(tattr_rdata),
 
-      .palette_addr   (data_addr[4:1]),
-      .palette_wdata  (data_wdata[11:0]),
-      .palette_wenable(&data_wenable[1:0] && data_select == SEL_VPALETTE),
-      .palette_rdata  (palette_rdata),
+      .tdata_addr(data_addr[7:0]),
+      .tdata_wdata(data_wdata[15:0]),
+      .tdata_wenable(data_wenable[1:0] & {2{data_select == SEL_VTDATA}}),
+      .tdata_rdata(tdata_rdata),
+
+      .pal_addr   (data_addr[4:1]),
+      .pal_wdata  (data_wdata[11:0]),
+      .pal_wenable(&data_wenable[1:0] && data_select == SEL_VPAL),
+      .pal_rdata  (pal_rdata),
 
       .ctrl_wdata  (data_wdata[0]),
       .ctrl_wenable(data_wenable[0] && data_select == SEL_VCTRL),

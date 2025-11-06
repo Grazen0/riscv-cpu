@@ -35,25 +35,32 @@ will print characters to the terminal as they would appear on the LCD.
 
 ### Memory map
 
-The memory map for **data memory** is as follows:
+The **data memory** is organized as follows:
 
-|  Range start  | Size (bytes) |     Description      |
-| :-----------: | :----------: | :------------------: |
-| `0x0000'0000` |    16384     | Instruction/data RAM |
-| `0x2000'0000` |      4       |      TRNG value      |
-| `0x4000'0000` |     128      |      Video RAM       |
-| `0x6000'0000` |      1       |        Joypad        |
-| `0x8000'0000` |      8       |    Video palette     |
-| `0xA000'0000` |      1       |     Video on/off     |
-| `0xC000'0000` |      2       |         LCD          |
-| `0xE000'0000` |      4       |    Audio control     |
+|  Range start  | Size (bytes) |      Description      |
+| :-----------: | :----------: | :-------------------: |
+| `0x0000'0000` |    16384     | Instruction/data RAM  |
+| `0x2000'0000` |      4       |      TRNG value       |
+| `0x4000'0000` |     128      | Video tile attributes |
+| `0x5000'0000` |     128      |    Video tile data    |
+| `0x6000'0000` |      1       |     Joypad input      |
+| `0x8000'0000` |      32      |  Video palette data   |
+| `0xA000'0000` |      1       |     Video control     |
+| `0xC000'0000` |      2       |      LCD control      |
+| `0xE000'0000` |      4       |     Audio control     |
 
-LCD section:
+#### Video control
 
-|  Range start  | Size (bytes) | Description |
-| :-----------: | :----------: | :---------: |
-| `0xC000'0000` |      1       |  LCD ctrl   |
-| `0xC000'0001` |      1       |  LCD data   |
+|  Range start  | Size (bytes) |           Description            |
+| :-----------: | :----------: | :------------------------------: |
+| `0xA000'0000` |      1       | Display on/off (on = 1, off = 0) |
+
+#### LCD control
+
+|  Range start  | Size (bytes) |   Description    |
+| :-----------: | :----------: | :--------------: |
+| `0xC000'0000` |      1       | LCD instr/status |
+| `0xC000'0001` |      1       |     LCD data     |
 
 All memory ranges left unspecified can be assumed to be mirrors of the rest,
 though they should not be used.
@@ -61,8 +68,24 @@ though they should not be used.
 On the other hand, the **instruction memory** lines are hardwired to RAM and
 nothing else, so instructions will never be read from anywhere other than RAM.
 
-## Sprite data
+### Graphics
 
-|   7    |   6    |     5, 4      |  3, 2, 1, 0  |
-| :----: | :----: | :-----------: | :----------: |
-| Y flip | X flip | Color palette | Sprite index |
+The video unit produces VGA output in 800x600 @ 72 Hz mode. The screen is
+divided in 28x18 square tiles of 32x32 each (although only 25 of a line's tiles
+are visible).
+
+Each tile is defined by a byte in the **tile attributes** section
+of video memory as follows:
+
+|   7    |   6    |     5 - 4     |      3 - 0      |
+| :----: | :----: | :-----------: | :-------------: |
+| Y flip | X flip | Color palette | Tile data index |
+
+Therefore, a tile:
+
+- Can be flipped horizontally and/or vertically. Can use 1 of 4 possible color
+- palettes programable via the **palette data**
+  memory.
+- Renders as one of 16 possible 8x8 tile "images" programmable via the **tile
+  data** memory. The format for pixel data is exactly the same as the [Game
+  Boy's](https://gbdev.io/pandocs/Tile_Data.html#data-format) tile data format.

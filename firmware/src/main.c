@@ -1,21 +1,10 @@
 #include "num.h"
+#include "rand.h"
 #include "tachylib.h"
 #include "tachyon.h"
 #include <stddef.h>
 
-typedef enum : u8 {
-    COLOR_BLACK = 0,
-    COLOR_RED = 1,
-    COLOR_GREEN = 2,
-    COLOR_WHITE = 3,
-} Color;
-
-static constexpr u16 palette_data[] = {
-    0x000, // black
-    0xF00, // red
-    0x0F0, // green
-    0xFFF, // white
-};
+// Ideas for VBlank use and draw buffering from https://www.nesdev.org/wiki/The_frame_and_NMIs
 
 typedef enum : u8 {
     DIR_UP,
@@ -29,23 +18,30 @@ typedef struct {
     u8 y;
 } Position;
 
-static inline bool pos_equals(const Position a, const Position b)
-{
-    return a.x == b.x && a.y == b.y;
-}
+static constexpr u16 snake_palette[] = {
+    0x000, // black
+    0xFFF, // white
+    0x00F, // blue
+    0x11A, // darker blue
+};
 
-static void set_tile(const Position tile_pos, const u8 color)
-{
-    const size_t tile_idx = (VIDEO_TILES_H * tile_pos.y) + tile_pos.x;
+static constexpr u16 apple_palette[] = {
+    0x000, // black
+    0xFFF, // white
+    0xF00, // red
+    0x632, // brown-ish
+};
 
-    const size_t byte_idx = tile_idx / 4;
-    const size_t rem = tile_idx % 4;
+static constexpr u8 TATTR_BACKGROUND = 0b0000'0000;
+static constexpr u8 TATTR_APPLE = 0b0001'0010;
 
-    const u8 cur_byte = VRAM[byte_idx];
-    const size_t bit_offset = 2 * rem;
-
-    VRAM[byte_idx] = (cur_byte & ~(0b11 << bit_offset)) | (color << bit_offset);
-}
+static constexpr u8 TATTR_SNAKE_HEAD[] = {
+    // TODO: use correct tile data for up and down
+    [DIR_UP] = 0b0000'0001,
+    [DIR_RIGHT] = 0b0000'0001,
+    [DIR_DOWN] = 0b1000'0001,
+    [DIR_LEFT] = 0b1000'0001,
+};
 
 static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H_VISIBLE * VIDEO_TILES_V;
 
@@ -54,6 +50,40 @@ static size_t snake_size;
 static Direction snake_dir;
 static Direction dir_next;
 static Position apple;
+
+typedef struct {
+    u8 tx;
+    u8 ty;
+    u8 tattr;
+} DrawBufEntry;
+
+static constexpr size_t DRAW_BUF_CAPACITY = 16;
+
+static DrawBufEntry draw_buf[DRAW_BUF_CAPACITY];
+static size_t draw_buf_size = 0;
+
+static void draw_buf_push(const u8 tx, const u8 ty, const u8 tattr)
+{
+    if (draw_buf_size >= DRAW_BUF_CAPACITY)
+        return;
+
+    draw_buf[draw_buf_size] = (DrawBufEntry){
+        .tx = tx,
+        .ty = ty,
+        .tattr = tattr,
+    };
+    ++draw_buf_size;
+}
+
+static inline void draw_buf_flush(void)
+{
+    for (size_t i = 0; i < draw_buf_size; ++i) {
+        const DrawBufEntry entry = draw_buf[i];
+        VTATTR[(VIDEO_TILES_H * entry.ty) + entry.tx] = entry.tattr;
+    }
+
+    draw_buf_size = 0;
+}
 
 static inline void game_step(void)
 {
@@ -64,95 +94,77 @@ static inline void game_step(void)
     for (size_t i = 1; i < snake_size; ++i)
         snake[i] = snake[i - 1];
 
+    Position *const head = &snake[0];
+
     switch (snake_dir) {
     case DIR_RIGHT:
-        ++snake[0].x;
+        if (head->x >= VIDEO_TILES_H_VISIBLE - 1)
+            head->x = 0;
+        else
+            ++head->x;
         break;
     case DIR_LEFT:
-        --snake[0].x;
+        if (head->x == 0)
+            head->x = VIDEO_TILES_H_VISIBLE - 1;
+        else
+            --head->x;
         break;
     case DIR_UP:
-        --snake[0].y;
+        if (head->y == 0)
+            head->y = VIDEO_TILES_V - 1;
+        else
+            --head->y;
         break;
     case DIR_DOWN:
-        ++snake[0].y;
+        if (head->y >= VIDEO_TILES_V - 1)
+            head->y = 0;
+        else
+            ++head->y;
         break;
     }
 
-    if (pos_equals(snake[0], apple)) {
+    if (head->x == apple.x && head->y == apple.y) {
         // Ate an apple
         ++snake_size;
         snake[snake_size - 1] = prev_tail;
 
         // We need a new apple
+        // TODO:generate random apple position
         ++apple.y;
-        set_tile(apple, COLOR_RED);
 
-        audio_play_note(NOTE_A4, 2);
+        draw_buf_push(apple.x, apple.y, TATTR_APPLE);
+        audio_play_note(NOTE_A4, 18);
     } else {
-        set_tile(prev_tail, COLOR_BLACK);
+        draw_buf_push(prev_tail.x, prev_tail.y, TATTR_BACKGROUND);
     }
 
-    set_tile(snake[0], COLOR_WHITE);
+    draw_buf_push(snake[0].x, snake[0].y, TATTR_SNAKE_HEAD[snake_dir]);
 }
 
-static inline void game_tick(void)
+static bool sleeping;
+
+static void wait_frame(void (*const wait_fn)())
 {
-    static constexpr size_t STEP_DELAY = 36;
-    static size_t step_timer = 0;
+    sleeping = true;
 
-    ++step_timer;
-
-    if (step_timer >= STEP_DELAY) {
-        step_timer = 0;
-        game_step();
-    }
+    while (sleeping)
+        (*wait_fn)();
 }
 
-static bool enable_irq = false;
+static bool enable_irq;
 
 __attribute__((interrupt)) void irq_handler(void)
 {
-    static size_t audio_timer;
-
     if (!enable_irq)
         return;
 
-    audio_tick();
-    game_tick();
+    draw_buf_flush();
+    sleeping = false;
 }
 
-void start(void)
+static void loop(void)
 {
-    VCTRL->display_on = false;
-    audio_init();
-
-    video_clear_vram();
-    video_set_palette(palette_data);
-
-    // lcd_send_instr(LCD_CLEAR);
-    // lcd_send_instr(LCD_RETURN_HOME);
-    // lcd_send_instr(LCD_DISPLAY_CONTROL(LCDDC_DISPLAY | LCDDC_CURSOR | LCDDC_BLINK));
-
-    // Initialize game
-    snake[0] = (Position){.y = 0, .x = 0};
-    snake_size = 1;
-    snake_dir = DIR_RIGHT;
-    dir_next = snake_dir;
-    apple = (Position){.y = 0, .x = 3};
-
-    set_tile(snake[0], COLOR_WHITE);
-    set_tile(apple, COLOR_RED);
-
-    rand_seed();
-
-    VCTRL->display_on = true;
-    enable_irq = true;
-}
-
-void loop(void)
-{
-    rand_get(); // Update randomness
+    rand_update();
 
     const u8 joypad = JOYPAD;
 
@@ -164,4 +176,65 @@ void loop(void)
         dir_next = DIR_RIGHT;
     else if (snake_dir != DIR_UP && (joypad & JP_DOWN) != 0)
         dir_next = DIR_DOWN;
+}
+
+// Runs at @ ~72 Hz
+static inline void fixed_loop(void)
+{
+    audio_tick();
+
+    static constexpr size_t STEP_DELAY = 1;
+    static size_t step_timer = 0;
+
+    ++step_timer;
+
+    if (step_timer >= STEP_DELAY) {
+        step_timer = 0;
+        game_step();
+    }
+}
+
+void main(void)
+{
+    enable_irq = false;
+    VCTRL->display_on = true;
+
+    audio_init();
+    video_init();
+    rand_seed();
+
+    video_load_palette(0, snake_palette);
+    video_load_palette(1, apple_palette);
+
+    extern const u8 TDATA_BACKGROUND[];
+    extern const u8 TDATA_SNAKE_HEAD_RIGHT[];
+    extern const u8 TDATA_APPLE[];
+
+    video_load_tdata(0, (const u16 *)TDATA_BACKGROUND);
+    video_load_tdata(1, (const u16 *)TDATA_SNAKE_HEAD_RIGHT);
+    video_load_tdata(2, (const u16 *)TDATA_APPLE);
+
+    // Initialize game
+    snake[0] = (Position){.y = 0, .x = 0};
+    snake_size = 1;
+    snake_dir = DIR_RIGHT;
+    dir_next = snake_dir;
+    apple = (Position){.y = 0, .x = 3};
+
+    draw_buf_push(snake[0].x, snake[0].y, TATTR_SNAKE_HEAD[snake_dir]);
+    draw_buf_push(apple.x, apple.y, TATTR_APPLE);
+
+    draw_buf_flush();
+
+    enable_irq = true;
+
+    // Turn on display after next vblank
+    wait_frame(rand_update);
+    VCTRL->display_on = true;
+
+    // Weeeeeeeeeeeeeeeeeee infinite loop
+    while (true) {
+        wait_frame(loop);
+        fixed_loop();
+    }
 }

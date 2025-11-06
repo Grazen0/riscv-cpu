@@ -1,5 +1,5 @@
-#ifndef FIRMWARE_PERIPHERALS_H
-#define FIRMWARE_PERIPHERALS_H
+#ifndef FIRMWARE_TACHYON_H
+#define FIRMWARE_TACHYON_H
 
 #include "num.h"
 #include <stddef.h>
@@ -20,7 +20,9 @@ constexpr size_t VIDEO_TILES_H_VISIBLE = 25;
 constexpr size_t VIDEO_TILES_V = 18;
 constexpr size_t VIDEO_TILES_TOTAL = VIDEO_TILES_H * VIDEO_TILES_V;
 
-constexpr size_t VIDEO_VRAM_SIZE = (VIDEO_TILES_TOTAL + 3) / 4; // = ceil(total / 4)
+constexpr size_t VTATTR_SIZE = VIDEO_TILES_TOTAL;
+
+constexpr size_t VIDEO_VPAL_SIZE = 4;
 constexpr size_t VIDEO_PALETTE_SIZE = 4;
 
 typedef struct {
@@ -39,6 +41,8 @@ typedef struct {
     volatile u32 half_period;
 } AudioControl;
 
+constexpr size_t VIDEO_TDATA_SIZE = 16 * 8;
+
 constexpr u8 JP_CENTER = 1 << 0;
 constexpr u8 JP_UP = 1 << 1;
 constexpr u8 JP_LEFT = 1 << 2;
@@ -46,19 +50,21 @@ constexpr u8 JP_RIGHT = 1 << 3;
 constexpr u8 JP_DOWN = 1 << 4;
 
 constexpr size_t TRNG_BASE = 0x2000'0000;
-constexpr size_t VRAM_BASE = 0x4000'0000;
+constexpr size_t VTATTR_BASE = 0x4000'0000;
+constexpr size_t VTDATA_BASE = 0x5000'0000;
 constexpr size_t JOYPAD_BASE = 0x6000'0000;
 constexpr size_t VPALETTE_BASE = 0x8000'0000;
 constexpr size_t VCTRL_BASE = 0xA000'0000;
 constexpr size_t LCD_BASE = 0xC000'0000;
-constexpr size_t AUDIOCTRL_BASE = 0xE000'0000;
+constexpr size_t AUDIO_BASE = 0xE000'0000;
 
 #define TRNG (*(volatile u32 *)TRNG_BASE)
-#define VRAM ((volatile u8 *)VRAM_BASE)
+#define VTATTR ((volatile u8 *)VTATTR_BASE)
+#define VTDATA ((volatile u16 *)VTDATA_BASE)
 #define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
 #define VPALETTE ((volatile u16 *)VPALETTE_BASE)
 #define VCTRL ((VideoControl *)VCTRL_BASE)
 #define LCD ((Lcd *)LCD_BASE)
-#define AUDIOCTRL ((AudioControl *)AUDIOCTRL_BASE)
+#define AUDIO ((AudioControl *)AUDIO_BASE)
 
 #endif

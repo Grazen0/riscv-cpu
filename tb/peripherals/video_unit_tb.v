@@ -17,8 +17,8 @@ module video_unit_tb ();
       .wclk (clk),
       .rst_n(rst_n),
 
-      .vram_wenable(1'b0),
-      .palette_wenable(1'b0),
+      .tattr_wenable(1'b0),
+      .pal_wenable  (1'b0),
 
       .ctrl_wdata  (ctrl_wdata),
       .ctrl_wenable(ctrl_wenable),
@@ -43,7 +43,7 @@ module video_unit_tb ();
     keiki.palette[1][2] = 12'hF0F;
     keiki.palette[1][3] = 12'hFF0;
 
-    keiki.vram.data[0] = 8'bx000_1001;
+    keiki.tattr_ram.data[0] = 8'bx000_1001;
 
     keiki.tdata_ram.data[(9*8)+0] = 16'h7E3C;
     keiki.tdata_ram.data[(9*8)+1] = 16'h4242;
