@@ -47,12 +47,12 @@ module tachyon_rv (
   ) patchy (
       .clk(clk),
 
-      .addr_1   (data_addr[11:0]),
+      .addr_1   (data_addr[13:0]),
       .wdata_1  (data_wdata),
       .wenable_1(data_wenable & {4{data_select == SEL_RAM}}),
       .rdata_1  (mem_rdata),
 
-      .addr_2 (instr_addr[11:0]),
+      .addr_2 (instr_addr[13:0]),
       .rdata_2(instr_data)
   );
 
@@ -107,12 +107,12 @@ module tachyon_rv (
       .wclk (clk),
       .rst_n(rst_n),
 
-      .vram_addr   (data_addr[6:0]),
+      .vram_addr   (data_addr[8:0]),
       .vram_wdata  (data_wdata[7:0]),
       .vram_wenable(data_wenable[0] && data_select == SEL_VRAM),
       .vram_rdata  (vram_rdata),
 
-      .palette_addr   (data_addr[2:1]),
+      .palette_addr   (data_addr[4:1]),
       .palette_wdata  (data_wdata[11:0]),
       .palette_wenable(&data_wenable[1:0] && data_select == SEL_VPALETTE),
       .palette_rdata  (palette_rdata),

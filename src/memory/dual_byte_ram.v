@@ -1,8 +1,7 @@
 `default_nettype none
 
 module dual_byte_ram #(
-    parameter SIZE = 2 ** 12,
-    parameter ADDR_MASK = SIZE - 1
+    parameter SIZE = 2 ** 12
 ) (
     input wire clk,
 

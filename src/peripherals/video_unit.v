@@ -1,4 +1,6 @@
-// 800x600 @ 72 Hz
+`default_nettype none
+
+// 800x600 @ ~72 Hz
 module video_unit (
     input wire clk,
     input wire wclk,
@@ -9,7 +11,13 @@ module video_unit (
     input wire vram_wenable,
     output wire [7:0] vram_rdata,
 
-    input  wire [ 1:0] palette_addr,
+    input wire [$clog2(2 * TD_SIZE)-1:0] tdata_addr,
+    input wire [15:0] tdata_wdata,
+    input wire [1:0] tdata_wenable,
+    output wire [15:0] tdata_rdata,
+
+
+    input  wire [ 3:0] palette_addr,
     input  wire [11:0] palette_wdata,
     input  wire        palette_wenable,
     output wire [11:0] palette_rdata,
@@ -36,15 +44,18 @@ module video_unit (
   localparam V_FRAME = V_BACK + 23;
 
   reg display_on;
-  reg [11:0] palette[0:3];
+  reg [11:0] palette[0:3][0:3];
 
-  assign palette_rdata = palette[palette_addr];
+  assign palette_rdata = palette[palette_addr[3:2]][palette_addr[1:0]];
 
   // 28 is nicer than 25. Produces some leftover tiles, but sacrifices must be made.
   localparam TILES_H = 28;
   localparam TILES_V = 18;
   localparam TILES_TOTAL = TILES_H * TILES_V;
-  localparam VRAM_SIZE = (TILES_TOTAL + 3) / 4;  // = ceil(total / 4)
+  localparam VRAM_SIZE = 2 ** $clog2(TILES_TOTAL);
+
+  localparam TD_TILES = 16;
+  localparam TD_SIZE = 8 * TD_TILES;
 
   wire [7:0] vram_show_data;
 
@@ -58,8 +69,24 @@ module video_unit (
       .wenable_1(vram_wenable),
       .rdata_1  (vram_rdata),
 
-      .addr_2 (vram_show_addr),
+      .addr_2 (tile_idx),
       .rdata_2(vram_show_data)
+  );
+
+  wire [15:0] tdata_show_data;
+
+  dual_hword_ram #(
+      .SIZE_HWORDS(TD_SIZE)
+  ) tdata_ram (
+      .clk(wclk),
+
+      .addr_1   (tdata_addr),
+      .wdata_1  (tdata_wdata),
+      .wenable_1(tdata_wenable),
+      .rdata_1  (tdata_rdata),
+
+      .addr_2 ({tdata_idx, flip_y ? (3'd7 - tile_y) : tile_y, 1'b0}),
+      .rdata_2(tdata_show_data)
   );
 
   reg [$clog2(V_FRAME)-1:0] y_pos, y_pos_next;
@@ -72,6 +99,9 @@ module video_unit (
   localparam TILE_IDX_WIDTH = $clog2(TILES_TOTAL);
   reg [TILE_IDX_WIDTH-1:0] tile_idx_base, tile_idx_base_next;
   reg [TILE_IDX_WIDTH-1:0] tile_idx, tile_idx_next;
+
+  wire [2:0] tile_x = x_pos[4:2];
+  wire [2:0] tile_y = y_pos[4:2];
 
   always @(*) begin
     y_pos_next         = y_pos;
@@ -102,7 +132,7 @@ module video_unit (
 
       if (y_pos_next == V_FRONT) begin
         v_visible_next = 0;
-      end else if (y_pos_next == V_FRAME) begin
+      end else if (y_pos_next == V_FRAME && tile_idx_base_next != TILES_V) begin
         // Next frame
         v_visible_next = 1;
 
@@ -131,7 +161,7 @@ module video_unit (
       display_on <= 0;
     end else begin
       if (palette_wenable) begin
-        palette[palette_addr] <= palette_wdata;
+        palette[palette_addr[3:2]][palette_addr[1:0]] <= palette_wdata;
       end
 
       if (ctrl_wenable) begin
@@ -144,13 +174,10 @@ module video_unit (
     if (!rst_n) begin
       x_pos         <= 0;
       y_pos         <= 0;
-
       h_sync        <= 1;
       v_sync        <= 1;
-
       tile_idx_base <= 0;
       tile_idx      <= 0;
-
       h_visible     <= 1;
       v_visible     <= 1;
     end else begin
@@ -165,16 +192,19 @@ module video_unit (
     end
   end
 
-  wire visible = h_visible & v_visible;
-  wire [3:0] visible_mask = {4{visible & display_on}};
+  wire [ 3:0] tdata_idx = vram_show_data[3:0];
+  wire        pal_idx = vram_show_data[4];
+  wire        flip_x = vram_show_data[5];
+  wire        flip_y = vram_show_data[6];
 
-  wire [$clog2(VRAM_SIZE)-1:0] vram_show_addr = tile_idx[TILE_IDX_WIDTH-1:2];
+  wire [ 1:0] color_idx_noflip = {tdata_show_data[15-tile_x], tdata_show_data[7-tile_x]};
+  wire [ 1:0] color_idx_yesflip = {tdata_show_data[8+tile_x], tdata_show_data[tile_x]};
 
-  wire [1:0] byte_offset = tile_idx[1:0];
-  wire [1:0] pal_idx = vram_show_data >> (2 * byte_offset);
-  wire [11:0] cur_color = palette[pal_idx];
+  wire [ 1:0] color_idx = flip_x ? color_idx_yesflip : color_idx_noflip;
+  wire [11:0] cur_color = palette[pal_idx][color_idx];
 
-  assign vga_red   = cur_color[11:8] & visible_mask;
-  assign vga_green = cur_color[7:4] & visible_mask;
-  assign vga_blue  = cur_color[3:0] & visible_mask;
+  wire        visible = h_visible & v_visible;
+  wire [11:0] visible_mask = {12{visible & display_on}};
+
+  assign {vga_red, vga_green, vga_blue} = cur_color & visible_mask;
 endmodule

@@ -27,7 +27,7 @@ module top_mcc (
   ) ram (
       .clk(clk),
 
-      .addr_1(mem_addr[11:0]),
+      .addr_1(mem_addr[13:0]),
       .wdata_1(mem_wdata),
       .wenable_1(mem_wenable & {4{~mem_addr[31]}}),
 

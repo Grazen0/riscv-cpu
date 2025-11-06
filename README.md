@@ -60,3 +60,9 @@ though they should not be used.
 
 On the other hand, the **instruction memory** lines are hardwired to RAM and
 nothing else, so instructions will never be read from anywhere other than RAM.
+
+## Sprite data
+
+|   7    |   6    |     5, 4      |  3, 2, 1, 0  |
+| :----: | :----: | :-----------: | :----------: |
+| Y flip | X flip | Color palette | Sprite index |
