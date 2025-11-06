@@ -34,7 +34,7 @@ module trng #(
     parameter OUT_WIDTH  = 32
 ) (
     input  wire                 clk,
-    output reg  [OUT_WIDTH-1:0] out
+    output wire [OUT_WIDTH-1:0] out
 );
   wire ro_a;
   wire ro_b;
@@ -53,10 +53,21 @@ module trng #(
       .out(ro_b)
   );
 
+
+  reg [OUT_WIDTH-1:0] out_raw;
+
   always @(posedge ro_a) begin
-    out <= {out[OUT_WIDTH-1:0], out[0] ^ ro_b};
+    out_raw <= {out_raw[OUT_WIDTH-1:0], out_raw[0] ^ ro_b};
   end
 
+  synchronizer #(
+      .WIDTH(OUT_WIDTH)
+  ) sync (
+      .clk(clk),
+      .in (out_raw),
+      .out(out)
+  );
+
   // For simulation purposes
-  initial out <= 32'hDEADBEEF;
+  initial out_raw <= 0;
 endmodule
