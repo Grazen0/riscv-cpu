@@ -19,8 +19,9 @@ INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CFLAGS := $(INC_FLAGS) -march=rv32i_zicsr -mabi=ilp32 -std=c23 -Oz -g \
-		  -ffunction-sections -fdata-sections -Wl,-gc-sections -ffreestanding \
+		  -ffunction-sections -fdata-sections -ffreestanding \
 		  -nostdlib -nostartfiles -static
+LDFLAGS := --no-warn-rwx-segments,--gc-sections
 
 CC := riscv32-none-elf-gcc
 OBJCOPY := riscv32-none-elf-objcopy
@@ -51,7 +52,7 @@ $(BUILD_DIR)/$(TARGET_BIN): $(BUILD_DIR)/$(TARGET_EXEC)
 	$(OBJCOPY) -O binary --set-section-flags .bss=alloc,load,contents $< $@
 
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS) $(LINKER)
-	$(CC) $(CFLAGS) -T $(LINKER) -o $@ $(OBJS) $(LDFLAGS)
+	$(CC) $(CFLAGS) -T $(LINKER) -o $@ $(OBJS) -Wl,$(LDFLAGS)
 
 $(BUILD_DIR)/%.tdata.c.o: $(BUILD_DIR)/%.tdata.c
 	mkdir -p $(dir $@)
