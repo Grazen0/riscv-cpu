@@ -197,7 +197,7 @@ static inline void fixed_loop(void)
 void main(void)
 {
     enable_irq = false;
-    VCTRL->display_on = true;
+    VCTRL->display_on = false;
 
     audio_init();
     video_init();

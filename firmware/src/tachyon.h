@@ -17,7 +17,7 @@ constexpr u8 LCDDC_BLINK = 0b001;
 
 constexpr size_t VIDEO_TILES_H = 28;
 constexpr size_t VIDEO_TILES_H_VISIBLE = 25;
-constexpr size_t VIDEO_TILES_V = 18;
+constexpr size_t VIDEO_TILES_V = 19;
 constexpr size_t VIDEO_TILES_TOTAL = VIDEO_TILES_H * VIDEO_TILES_V;
 
 constexpr size_t VTATTR_SIZE = VIDEO_TILES_TOTAL;

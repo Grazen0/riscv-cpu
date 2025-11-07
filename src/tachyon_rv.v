@@ -99,7 +99,7 @@ module tachyon_rv (
       .data_wenable(data_wenable),
       .data_rdata  (data_rdata),
 
-      .irq(~h_sync)
+      .irq(~v_sync)
   );
 
   wire [ 7:0] tattr_rdata;
@@ -111,7 +111,7 @@ module tachyon_rv (
       .wclk (clk),
       .rst_n(rst_n),
 
-      .tattr_addr(data_addr[8:0]),
+      .tattr_addr(data_addr[9:0]),
       .tattr_wdata(data_wdata[7:0]),
       .tattr_wenable(data_wenable[0] && data_select == SEL_VTATTR),
       .tattr_rdata(tattr_rdata),

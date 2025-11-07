@@ -50,7 +50,7 @@ module video_unit (
 
   // 28 is nicer than 25. Produces some leftover tiles, but sacrifices must be made.
   localparam TILES_H = 28;
-  localparam TILES_V = 18;
+  localparam TILES_V = 19;
   localparam TILES_TOTAL = TILES_H * TILES_V;
   localparam TATTR_SIZE = 2 ** $clog2(TILES_TOTAL);
 
