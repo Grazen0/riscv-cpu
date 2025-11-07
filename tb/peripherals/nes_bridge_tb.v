@@ -4,6 +4,9 @@ module nes_bridge_tb ();
   reg clk, rst_n;
   always #5 clk = ~clk;
 
+  reg start;
+
+  wire ready, data_valid;
   wire scl, sda;
   wire [7:0] joypad_data;
 
@@ -11,13 +14,14 @@ module nes_bridge_tb ();
       .clk  (clk),
       .rst_n(rst_n),
 
-      // .wdata(),
-      // .wenable(),
+      .start(start),
+
+      .ready(ready),
+      .joypad_rdata_valid(data_valid),
+      .joypad_rdata(joypad_data),
 
       .scl(scl),
-      .sda(sda),
-
-      .joypad_data(joypad_data)
+      .sda(sda)
   );
 
   initial begin
@@ -25,8 +29,13 @@ module nes_bridge_tb ();
 
     clk   = 1;
     rst_n = 0;
+    start = 0;
+
     #5 rst_n = 1;
 
-    #1000 $finish();
+    #20 start = 1;
+    #10 start = 0;
+
+    #10_000 $finish();
   end
 endmodule

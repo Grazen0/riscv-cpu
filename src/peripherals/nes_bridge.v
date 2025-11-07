@@ -5,7 +5,9 @@
 `define CMD_READ 2'd2
 `define CMD_STOP 2'd3
 
-module i2c_controller (
+module i2c_controller #(
+    parameter SCL_PERIOD = 500
+) (
     input wire clk,
     input wire rst_n,
 
@@ -14,7 +16,7 @@ module i2c_controller (
     input wire wack,
     input wire start,
 
-    output reg done,
+    output reg ready,
     output reg [7:0] rdata,
     output reg rdata_valid,
 
@@ -36,15 +38,16 @@ module i2c_controller (
   localparam S_STOP = 4'd12;
   localparam S_DELAY = 4'd13;
 
-  localparam DELAY_TIME = 4;
+  localparam DELAY_TIME = 4 * SCL_HALF_PERIOD;
+  localparam SCL_HALF_PERIOD = SCL_PERIOD / 2;
 
   reg scl_reg, scl_reg_next;
   reg sda_reg, sda_reg_next;
 
-  reg [3:0] state, next_state;
+  reg [3:0] state, state_next;
   reg [4:0] delay, delay_next;
 
-  reg done_next;
+  reg ready_next;
   reg [7:0] rdata_next;
   reg rdata_valid_next;
 
@@ -55,9 +58,10 @@ module i2c_controller (
 
   reg ack, ack_next;
 
+  reg [$clog2(SCL_HALF_PERIOD)-1:0] scl_delay, scl_delay_next;
 
   always @(*) begin
-    done_next        = done;
+    ready_next       = ready;
     rdata_valid_next = rdata_valid;
     delay_next       = delay;
     scl_reg_next     = scl_reg;
@@ -68,22 +72,26 @@ module i2c_controller (
     rdata_next       = rdata;
     wack_buf_next    = wack_buf;
 
-    next_state       = state;
+    state_next       = state;
 
     case (state)
       S_IDLE: begin
         if (start) begin
-          done_next        = 0;
+          ready_next       = 0;
           rdata_valid_next = 0;
           wdata_buf_next   = wdata;
           wack_buf_next    = wack;
+          scl_delay_next   = SCL_HALF_PERIOD;
 
           case (cmd)
-            `CMD_START: next_state = S_START;
-            `CMD_WRITE: next_state = S_WRITE_SETUP;
-            `CMD_READ:  next_state = S_READ_SETUP;
-            `CMD_STOP:  next_state = S_STOP_SETUP;
-            default:    next_state = S_IDLE;
+            `CMD_START: state_next = S_START;
+            `CMD_WRITE: state_next = S_WRITE_SETUP;
+            `CMD_READ:  state_next = S_READ_SETUP;
+            `CMD_STOP:  state_next = S_STOP_SETUP;
+            default: begin
+              scl_delay_next = 0;
+              state_next = S_IDLE;
+            end
           endcase
         end
       end
@@ -92,96 +100,149 @@ module i2c_controller (
         if (sda_reg) begin
           sda_reg_next = 0;
         end else begin
-          scl_reg_next = 0;
+          scl_delay_next = scl_delay - 1;
 
-          next_state   = S_DELAY;
-          delay_next   = DELAY_TIME;
+          if (scl_delay_next == 0) begin
+            scl_reg_next = 0;
+
+            state_next   = S_DELAY;
+            delay_next   = DELAY_TIME;
+          end
         end
       end
 
       S_STOP_SETUP: begin
         sda_reg_next = 0;
-        next_state   = S_STOP;
+        state_next   = S_STOP;
       end
       S_STOP: begin
         if (!scl_reg) begin
-          scl_reg_next = 1;
+          scl_reg_next   = 1;
+
+          scl_delay_next = scl_delay - 1;
+
+          if (scl_delay_next == 0) begin
+            scl_delay_next = SCL_HALF_PERIOD;
+          end
         end else begin
           sda_reg_next = 1;
-
-          next_state   = S_DELAY;
+          state_next   = S_DELAY;
           delay_next   = DELAY_TIME;
         end
       end
 
       S_WRITE_SETUP: begin
-        sda_reg_next = wdata_buf[7];
-        wdata_buf_next = {wdata_buf[6:0], wdata_buf[7]};
-        next_state = S_WRITE_CLK;
+        sda_reg_next   = wdata_buf[7];
+        scl_delay_next = scl_delay - 1;
+
+        if (scl_delay_next == 0) begin
+          wdata_buf_next = {wdata_buf[6:0], wdata_buf[7]};
+          state_next = S_WRITE_CLK;
+        end
       end
       S_WRITE_CLK: begin
         if (!scl_reg) begin
           // Begin bit write
-          scl_reg_next = 1;
+          scl_reg_next   = 1;
+          scl_delay_next = SCL_HALF_PERIOD;
         end else begin
-          // End bit write
-          scl_reg_next     = 0;
-          next_state       = S_WRITE_SETUP;
-          bit_counter_next = bit_counter + 1;
+          scl_delay_next = scl_delay - 1;
 
-          if (bit_counter_next == 0) begin
-            next_state = S_READ_ACK_SETUP_1;
+          if (scl_delay_next == 0) begin
+            // End bit write
+            scl_reg_next     = 0;
+            state_next       = S_WRITE_SETUP;
+            bit_counter_next = bit_counter + 1;
+
+            if (bit_counter_next == 0) begin
+              scl_delay_next = SCL_HALF_PERIOD;
+              state_next = S_READ_ACK_SETUP_1;
+            end
           end
         end
       end
       S_READ_ACK_SETUP_1: begin
-        sda_reg_next = 1;  // Release SDA
-        next_state   = S_READ_ACK_SETUP_2;
+        sda_reg_next   = 1;  // Release SDA
+
+        scl_delay_next = scl_delay - 1;
+
+        if (scl_delay_next == 0) begin
+          state_next = S_READ_ACK_SETUP_2;
+          scl_delay_next = SCL_HALF_PERIOD;
+        end
       end
       S_READ_ACK_SETUP_2: begin
-        scl_reg_next = 1;
-        next_state   = S_READ_ACK;
+        scl_delay_next = scl_delay - 1;
+
+        if (scl_delay_next == 0) begin
+          scl_reg_next = 1;
+          state_next = S_READ_ACK;
+          scl_delay_next = SCL_HALF_PERIOD;
+        end
       end
       S_READ_ACK: begin
-        ack_next     = sda;
-        scl_reg_next = 0;
+        scl_delay_next = scl_delay - 1;
 
-        next_state   = S_DELAY;
-        delay_next   = DELAY_TIME;
+        if (scl_delay_next == 0) begin
+          ack_next     = sda;
+          scl_reg_next = 0;
+
+          state_next   = S_DELAY;
+          delay_next   = DELAY_TIME;
+        end
       end
 
       S_READ_SETUP: begin
-        sda_reg_next = 1;  // Release SDA
-        next_state   = S_READ_CLK;
+        sda_reg_next   = 1;  // Release SDA
+
+        scl_delay_next = scl_delay - 1;
+
+        if (scl_delay_next == 0) begin
+          state_next = S_READ_CLK;
+        end
       end
       S_READ_CLK: begin
         if (!scl_reg) begin
           // Begin bit read
-          scl_reg_next = 1;
+          scl_reg_next   = 1;
+          scl_delay_next = SCL_HALF_PERIOD;
         end else begin
-          // End bit read
-          rdata_next       = {rdata[6:0], sda};
-          scl_reg_next     = 0;
-          bit_counter_next = bit_counter + 1;
-          next_state       = S_READ_SETUP;
+          scl_delay_next = scl_delay - 1;
 
-          if (bit_counter_next == 0) begin
-            next_state = S_WRITE_ACK_SETUP;
-            rdata_valid_next = 1;
+          if (scl_delay_next == 0) begin
+            // End bit read
+            rdata_next       = {rdata[6:0], sda};
+            scl_reg_next     = 0;
+            bit_counter_next = bit_counter + 1;
+            state_next       = S_READ_SETUP;
+
+            if (bit_counter_next == 0) begin
+              state_next = S_WRITE_ACK_SETUP;
+              rdata_valid_next = 1;
+            end
           end
         end
       end
       S_WRITE_ACK_SETUP: begin
-        sda_reg_next = wack_buf;
-        next_state   = S_WRITE_ACK;
+        sda_reg_next   = wack_buf;
+        scl_delay_next = scl_delay - 1;
+
+        if (scl_delay_next == 0) begin
+          state_next = S_WRITE_ACK;
+        end
       end
       S_WRITE_ACK: begin
         if (!scl_reg) begin
-          scl_reg_next = 1;
+          scl_reg_next   = 1;
+          scl_delay_next = SCL_HALF_PERIOD;
         end else begin
-          scl_reg_next = 0;
-          next_state   = S_DELAY;
-          delay_next   = DELAY_TIME;
+          scl_delay_next = scl_delay - 1;
+
+          if (scl_delay_next == 0) begin
+            scl_reg_next = 0;
+            state_next   = S_DELAY;
+            delay_next   = DELAY_TIME;
+          end
         end
       end
 
@@ -189,9 +250,12 @@ module i2c_controller (
         delay_next = delay - 1;
 
         if (delay_next == 0) begin
-          done_next  = 1;
-          next_state = S_IDLE;
+          ready_next = 1;
+          state_next = S_IDLE;
         end
+      end
+      default: begin
+        state_next = S_IDLE;
       end
     endcase
   end
@@ -202,25 +266,27 @@ module i2c_controller (
       scl_reg     <= 1;
       sda_reg     <= 1;
       delay       <= 0;
-      done        <= 0;
+      ready       <= 1;
       rdata       <= 0;
       rdata_valid <= 0;
       bit_counter <= 0;
       wdata_buf   <= 0;
       ack         <= 0;
       wack_buf    <= 0;
+      scl_delay   <= 0;
     end else begin
-      state       <= next_state;
+      state       <= state_next;
       scl_reg     <= scl_reg_next;
       sda_reg     <= sda_reg_next;
       delay       <= delay_next;
-      done        <= done_next;
+      ready       <= ready_next;
       rdata       <= rdata_next;
       rdata_valid <= rdata_valid_next;
       bit_counter <= bit_counter_next;
       wdata_buf   <= wdata_buf_next;
       ack         <= ack_next;
       wack_buf    <= wack_buf_next;
+      scl_delay   <= scl_delay_next;
     end
   end
 
@@ -228,86 +294,151 @@ module i2c_controller (
   assign sda = sda_reg ? 1'bz : 1'b0;
 endmodule
 
-module nes_bridge (
+module nes_bridge #(
+    parameter SLAVE_ADDR = 7'h52,
+    parameter SCL_PERIOD = 500  // 10 Khz assuming base clock of 50 MHz
+) (
     input wire clk,
     input wire rst_n,
 
-    // input wire wdata,
-    // input wire wenable,
+    input wire start,
+
+    output wire ready,
 
     output wire scl,
     output wire sda,
 
-    output wire [7:0] joypad_data
+    output wire joypad_rdata_valid,
+    output wire [7:0] joypad_rdata
 );
-  localparam I2C_ADDR = 7'h52;
+  localparam S_IDLE = 4'd0;
+  localparam S_START_1 = 4'd1;
+  localparam S_ADDRW_WRITE = 4'd2;
+  localparam S_INIT_WRITE = 4'd3;
+  localparam S_STOP_1 = 4'd4;
+  localparam S_START_2 = 4'd5;
+  localparam S_ADDRR_WRITE = 4'd6;
+  localparam S_DATA_READ = 4'd7;
+  localparam S_STOP_2 = 4'd8;
+
   localparam RW_WRITE = 1'b0;
   localparam RW_READ = 1'b1;
 
-  reg [1:0] cmd;
-  reg start;
-  reg [7:0] wdata;
-  reg wack;
+  reg [3:0] state, state_next;
+  reg [2:0] read_ctr, read_ctr_next;
 
-  wire done;
+  reg [1:0] i2c_cmd;
+  reg i2c_start;
+  reg [7:0] i2c_wdata;
+  reg i2c_wack;
 
-  i2c_controller controller (
+  wire i2c_ready;
+
+  i2c_controller #(
+      .SCL_PERIOD(8)
+  ) controller (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .cmd  (cmd),
-      .start(start),
-      .wdata(wdata),
-      .wack (wack),
+      .cmd  (i2c_cmd),
+      .start(i2c_start),
+      .wdata(i2c_wdata),
+      .wack (i2c_wack),
 
-      .done(done),
+      .ready(i2c_ready),
 
       .scl(scl),
       .sda(sda)
   );
 
-  initial begin
-    start = 0;
-    #15;
+  always @(*) begin
+    i2c_start = 0;
+    state_next = state;
+    i2c_cmd = 0;
+    i2c_wdata = 8'bzzzz_zzzz;
+    read_ctr_next = read_ctr;
 
-    cmd   = `CMD_START;
-    start = 1;
-    #10 start = 0;
+    case (state)
+      S_IDLE: begin
+        if (start) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_START;
+          state_next = S_START_1;
+        end
+      end
+      S_START_1: begin
+        if (i2c_ready) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_WRITE;
+          i2c_wdata = {SLAVE_ADDR, RW_WRITE};
+          state_next = S_ADDRW_WRITE;
+        end
+      end
+      S_ADDRW_WRITE: begin
+        if (i2c_ready) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_STOP;
+          state_next = S_STOP_1;
+        end
+      end
+      S_STOP_1: begin
+        if (i2c_ready) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_START;
+          state_next = S_START_2;
+        end
+      end
+      S_START_2: begin
+        if (i2c_ready) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_WRITE;
+          i2c_wdata = {SLAVE_ADDR, RW_READ};
+          state_next = S_ADDRR_WRITE;
+        end
+      end
+      S_ADDRR_WRITE: begin
+        if (i2c_ready) begin
+          i2c_start = 1;
+          i2c_cmd = `CMD_READ;
+          state_next = S_DATA_READ;
+          i2c_wack = 0;
+          read_ctr_next = 6;
+        end
+      end
+      S_DATA_READ: begin
+        if (i2c_ready) begin
+          read_ctr_next = read_ctr - 1;
 
-    @(posedge done);
-    #5;
+          i2c_start = 1;
+          i2c_cmd = `CMD_READ;
+          state_next = S_DATA_READ;
+          i2c_wack = read_ctr_next == 1;
 
-    cmd   = `CMD_WRITE;
-    wdata = 8'h52;
-    start = 1;
-    #10 start = 0;
+          if (read_ctr_next == 0) begin
+            i2c_start = 1;
+            i2c_cmd = `CMD_STOP;
+            state_next = S_STOP_2;
+          end
+        end
+      end
+      S_STOP_2: begin
+        if (i2c_ready) begin
+          state_next = S_IDLE;
+        end
+      end
+      default: begin
+        state_next = S_IDLE;
+      end
+    endcase
+  end
 
-    @(posedge done);
-    #5;
-
-    cmd   = `CMD_READ;
-    wack  = 1;
-    start = 1;
-    #10 start = 0;
-
-    // 01100010
-    @(posedge scl) force sda = 0;
-    @(posedge scl) release sda;
-    @(posedge scl) release sda;
-    @(posedge scl) force sda = 0;
-    @(posedge scl) force sda = 0;
-    @(posedge scl) force sda = 0;
-    @(posedge scl) release sda;
-    @(posedge scl) force sda = 0;
-
-    @(negedge scl) release sda;
-
-    @(posedge done);
-    #5;
-
-    cmd   = `CMD_STOP;
-    start = 1;
-    #10 start = 0;
-
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      state    <= S_IDLE;
+      read_ctr <= 0;
+    end else begin
+      state    <= state_next;
+      read_ctr <= read_ctr_next;
+    end
   end
 endmodule
