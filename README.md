@@ -92,8 +92,7 @@ of video memory as follows:
 Therefore, a tile:
 
 - Can be flipped horizontally and/or vertically. Can use 1 of 4 possible color
-- palettes programable via the **palette data**
-  memory.
+  palettes programable via the **palette data** memory.
 - Renders as one of 16 possible 8x8 tile "images" programmable via the **tile
   data** memory. The format for pixel data is exactly the same as the [Game
   Boy's](https://gbdev.io/pandocs/Tile_Data.html#data-format) tile data format.
