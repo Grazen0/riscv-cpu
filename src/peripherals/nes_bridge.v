@@ -268,7 +268,7 @@ module i2c_controller #(
     endcase
   end
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state       <= S_IDLE;
       scl_reg     <= 1;
@@ -472,7 +472,7 @@ module nes_bridge #(
     endcase
   end
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       state        <= S_IDLE;
       read_ctr     <= 0;
