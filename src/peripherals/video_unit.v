@@ -170,7 +170,7 @@ module video_unit (
     end
   end
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       x_pos         <= 0;
       y_pos         <= 0;

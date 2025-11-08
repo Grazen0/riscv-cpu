@@ -13,7 +13,7 @@ module lcd_unit (
     output reg [1:0] lcd_ctrl,
     output reg lcd_enable
 );
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       lcd_data   <= 0;
       lcd_ctrl   <= 2'b00;

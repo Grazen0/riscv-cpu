@@ -352,7 +352,7 @@ module single_cycle_cpu (
     endcase
   end
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) pc <= 0;
     else pc <= pc_next;
   end

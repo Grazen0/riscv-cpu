@@ -38,7 +38,7 @@ module audio_unit (
     end
   end
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       counter     <= 0;
       half_period <= 0;

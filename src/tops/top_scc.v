@@ -50,7 +50,7 @@ module top_scc (
       .data_rdata(data_rdata)
   );
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       lcd_data   <= 0;
       lcd_ctrl   <= 0;

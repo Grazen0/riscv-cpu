@@ -15,7 +15,7 @@ module irq_gate (
 
   wire irq_edge = irq_synced & ~irq_prev;
 
-  always @(posedge clk) begin
+  always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
       irq_sync_reg <= 0;
       irq_synced   <= 0;
