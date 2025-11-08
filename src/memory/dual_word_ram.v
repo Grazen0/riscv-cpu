@@ -2,7 +2,8 @@
 
 module dual_word_ram #(
     parameter SIZE_WORDS  = 2 ** 12,
-    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem"
+    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem",
+    parameter ADDR_WIDTH = $clog2(4 * SIZE_WORDS)
 ) (
     input wire clk,
 
@@ -14,8 +15,6 @@ module dual_word_ram #(
     input  wire [ADDR_WIDTH-1:0] addr_2,
     output wire [          31:0] rdata_2
 );
-  localparam ADDR_WIDTH = $clog2(4 * SIZE_WORDS);
-
   reg [31:0] data[0:SIZE_WORDS-1];
 
   wire [29:0] word_addr_1 = addr_1[ADDR_WIDTH-1:2];

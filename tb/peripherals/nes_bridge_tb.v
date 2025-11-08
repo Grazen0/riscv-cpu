@@ -34,6 +34,6 @@ module nes_bridge_tb ();
     #20 start = 1;
     #10 start = 0;
 
-    #1_000_000 $finish();
+    #100_000 $finish();
   end
 endmodule

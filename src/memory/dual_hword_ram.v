@@ -1,7 +1,8 @@
 `default_nettype none
 
 module dual_hword_ram #(
-    parameter SIZE_HWORDS = 2 ** 12
+    parameter SIZE_HWORDS = 2 ** 12,
+    parameter ADDR_WIDTH = $clog2(2 * SIZE_HWORDS) 
 ) (
     input wire clk,
 
@@ -13,8 +14,6 @@ module dual_hword_ram #(
     input wire [ADDR_WIDTH-1:0] addr_2,
     output wire [15:0] rdata_2
 );
-  localparam ADDR_WIDTH = $clog2(2 * SIZE_HWORDS);
-
   reg [15:0] data[0:SIZE_HWORDS-1];
 
   wire [ADDR_WIDTH-2:0] hword_addr_1 = addr_1[ADDR_WIDTH-1:1];

@@ -2,7 +2,7 @@
 set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
 create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
 
-create_generated_clock -name clk_half -source [get_pins u_mmcm/CLKIN1] -divide_by 2 [get_pins u_mmcm/CLKOUT0]
+create_generated_clock -add -name clk_half -source [get_pins u_mmcm/CLKIN1] -divide_by 2 [get_pins u_mmcm/CLKOUT0]
 
 ## Switches
 set_property -dict { PACKAGE_PIN V17   IOSTANDARD LVCMOS33 } [get_ports {rst_n}]
