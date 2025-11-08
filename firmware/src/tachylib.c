@@ -105,3 +105,16 @@ void audio_play_note(const MusicNote note, const size_t duration)
     AUDIO->half_period = note;
     audio_timer = duration;
 }
+
+u8 joypad_read(void)
+{
+    while (!JOYPAD->ready) {
+    }
+
+    JOYPAD->start_read = 1;
+
+    while (!JOYPAD->data_valid) {
+    }
+
+    return JOYPAD->data;
+}

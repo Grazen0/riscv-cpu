@@ -10,7 +10,7 @@ TARGETS := $(patsubst $(TB_DIR)/%.v,$(BUILD_DIR)/%,$(TBS))
 INC_DIRS := $(shell find ./include -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-IVERILOG_FLAGS := $(INC_FLAGS) 
+IVERILOG_FLAGS := -DIVERILOG
 
 DATA_DIR := ./data
 FIRMWARE_DIR := firmware
@@ -34,7 +34,7 @@ $(DATA_DIR)/%.mem: FORCE
 
 $(BUILD_DIR)/%: $(TB_DIR)/%.v $(SRCS) $(DATA_DIR)/$(FIRMWARE_MEM)
 	mkdir -p $(dir $@)
-	iverilog $(IVERILOG_FLAGS) -o $@ $< $(SRCS) 
+	iverilog $(INC_FLAGS) $(IVERILOG_FLAGS) -o $@ $< $(SRCS) 
 
 run: $(BUILD_DIR)/$(TB)
 	@if [ -z "$(TB)" ]; then \

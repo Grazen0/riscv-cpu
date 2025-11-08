@@ -15,7 +15,7 @@ module cpu_csr_file (
 );
   reg [31:0] mtvec, mepc;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       mtvec <= 0;
       mepc  <= 0;

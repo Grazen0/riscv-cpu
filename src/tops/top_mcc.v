@@ -44,7 +44,7 @@ module top_mcc (
       .mem_rdata(mem_rdata)
   );
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       lcd_data   <= 0;
       lcd_ctrl   <= 0;

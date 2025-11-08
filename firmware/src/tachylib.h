@@ -36,4 +36,6 @@ void audio_tick(void);
 
 void audio_play_note(MusicNote note, size_t duration);
 
+u8 joypad_read(void);
+
 #endif

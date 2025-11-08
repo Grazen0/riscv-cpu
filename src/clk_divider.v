@@ -10,7 +10,7 @@ module clk_divider #(
   localparam COUNTER_BITS = $clog2(PERIOD);
   reg [COUNTER_BITS-1:0] counter;
 
-  always @(posedge clk_in or negedge rst_n)
+  always @(posedge clk_in)
     if (!rst_n) begin
       clk_out <= 0;
       counter <= 0;

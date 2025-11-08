@@ -28,7 +28,7 @@ constexpr size_t VIDEO_PALETTE_SIZE = 4;
 typedef struct {
     union {
         volatile u8 instr;
-        volatile u8 status;
+        volatile const u8 status;
     };
     volatile u8 data;
 } Lcd;
@@ -40,6 +40,15 @@ typedef struct {
 typedef struct {
     volatile u32 half_period;
 } AudioControl;
+
+typedef struct {
+    union {
+        volatile u8 start_read;
+        volatile const bool ready;
+    };
+    volatile const bool data_valid;
+    volatile const u8 data;
+} Joypad;
 
 constexpr size_t VIDEO_TDATA_SIZE = 16 * 8;
 
@@ -61,7 +70,7 @@ constexpr size_t AUDIO_BASE = 0xE000'0000;
 #define TRNG (*(volatile u32 *)TRNG_BASE)
 #define VTATTR ((volatile u8 *)VTATTR_BASE)
 #define VTDATA ((volatile u16 *)VTDATA_BASE)
-#define JOYPAD (*(volatile u8 *)JOYPAD_BASE)
+#define JOYPAD ((Joypad *)JOYPAD_BASE)
 #define VPALETTE ((volatile u16 *)VPALETTE_BASE)
 #define VCTRL ((VideoControl *)VCTRL_BASE)
 #define LCD ((Lcd *)LCD_BASE)

@@ -5,7 +5,8 @@ module tachyon_rv (
     input wire clk_vga,
     input wire rst_n,
 
-    input wire [4:0] joypad,
+    output wire joypad_scl,
+    output wire joypad_sda,
 
     output wire [7:0] lcd_data,
     output wire [1:0] lcd_ctrl,
@@ -79,7 +80,7 @@ module tachyon_rv (
       SEL_TRNG:   data_rdata = trng_rdata;
       SEL_VTATTR: data_rdata = {24'b0, tattr_rdata};
       SEL_VTDATA: data_rdata = {16'b0, tdata_rdata};
-      SEL_JOYPAD: data_rdata = {27'b0, joypad};
+      SEL_JOYPAD: data_rdata = {24'b0, joypad_rdata};
       SEL_VPAL:   data_rdata = {20'b0, pal_rdata};
       SEL_LCD:    data_rdata = {24'b0, lcd_data};
       SEL_AUDIO:  data_rdata = audio_rdata;
@@ -160,5 +161,20 @@ module tachyon_rv (
       .rdata  (audio_rdata),
 
       .out(audio_out)
+  );
+
+  wire [7:0] joypad_rdata;
+
+  nes_bridge sanae (
+      .clk  (clk),
+      .rst_n(rst_n),
+
+      .start(data_wenable[0] && data_select == SEL_JOYPAD),
+
+      .rdata_addr(data_addr[1:0]),
+      .rdata(joypad_rdata),
+
+      .scl(joypad_scl),
+      .sda(joypad_sda)
   );
 endmodule

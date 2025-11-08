@@ -1,7 +1,8 @@
 `default_nettype none
 
 module dual_byte_ram #(
-    parameter SIZE = 2 ** 12
+    parameter SIZE = 2 ** 12,
+    parameter ADDR_WIDTH = $clog2(SIZE)
 ) (
     input wire clk,
 
@@ -13,8 +14,6 @@ module dual_byte_ram #(
     input  wire [ADDR_WIDTH-1:0] addr_2,
     output wire [           7:0] rdata_2
 );
-  localparam ADDR_WIDTH = $clog2(SIZE);
-
   reg [7:0] data[0:SIZE-1];
 
   always @(posedge clk) begin

@@ -18,7 +18,7 @@ module cpu_register_file (
 
   integer i;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       // Reset registers
       for (i = 1; i < REGS_SIZE; i = i + 1) begin

@@ -4,7 +4,8 @@ module top_tachyon_rv (
     input wire clk,
     input wire rst_n,
 
-    input wire [4:0] joypad,
+    output wire joypad_scl,
+    output wire joypad_sda,
 
     output wire [7:0] lcd_data,
     output wire [1:0] lcd_ctrl,
@@ -18,31 +19,39 @@ module top_tachyon_rv (
 
     output wire audio_out
 );
-  wire clk_cpu;
-  wire clk_vga;
+  wire clk_half;
 
+`ifdef IVERILOG
   clk_divider #(
       .PERIOD(2)
-  ) cpu_divider (
+  ) divider (
       .clk_in (clk),
       .rst_n  (rst_n),
-      .clk_out(clk_cpu)
+      .clk_out(clk_half)
   );
+`else
+  wire clkfb;
 
-  clk_divider #(
-      .PERIOD(2)
-  ) vga_divider (
-      .clk_in (clk),
-      .rst_n  (rst_n),
-      .clk_out(clk_vga)
+  MMCME2_BASE #(
+      .CLKIN1_PERIOD(10.0),  // 100 MHz input
+      .CLKFBOUT_MULT_F(8.0),
+      .CLKOUT0_DIVIDE_F(16.0)  // 100 * 8 / 16 = 50 MHz
+  ) u_mmcm (
+      .CLKIN1  (clk),
+      .CLKFBIN (clkfb),
+      .CLKFBOUT(clkfb),
+      .CLKOUT0 (clk_half),
+      .LOCKED  ()
   );
+`endif
 
   tachyon_rv tachyon (
-      .clk(clk_cpu),
-      .clk_vga(clk_vga),
+      .clk(clk_half),
+      .clk_vga(clk_half),
       .rst_n(rst_n),
 
-      .joypad(joypad),
+      .joypad_scl(joypad_scl),
+      .joypad_sda(joypad_sda),
 
       .lcd_data  (lcd_data),
       .lcd_ctrl  (lcd_ctrl),

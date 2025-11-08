@@ -165,8 +165,14 @@ __attribute__((interrupt)) void irq_handler(void)
 static void loop(void)
 {
     rand_update();
+}
 
-    const u8 joypad = JOYPAD;
+// Runs at @ ~72 Hz
+static inline void fixed_loop(void)
+{
+    audio_tick();
+
+    const u8 joypad = joypad_read();
 
     if (snake_dir != DIR_DOWN && (joypad & JP_UP) != 0)
         dir_next = DIR_UP;
@@ -176,12 +182,6 @@ static void loop(void)
         dir_next = DIR_RIGHT;
     else if (snake_dir != DIR_UP && (joypad & JP_DOWN) != 0)
         dir_next = DIR_DOWN;
-}
-
-// Runs at @ ~72 Hz
-static inline void fixed_loop(void)
-{
-    audio_tick();
 
     static constexpr size_t STEP_DELAY = 1;
     static size_t step_timer = 0;
@@ -202,6 +202,10 @@ void main(void)
     audio_init();
     video_init();
     rand_seed();
+
+    const u8 joypad = joypad_read();
+    lcd_print_hex(joypad);
+    lcd_print("\n");
 
     video_load_palette(0, snake_palette);
     video_load_palette(1, apple_palette);
