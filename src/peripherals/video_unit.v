@@ -193,9 +193,9 @@ module video_unit (
   end
 
   wire [ 3:0] tdata_idx = tile_attrs[3:0];
-  wire        pal_idx = tile_attrs[4];
-  wire        flip_x = tile_attrs[5];
-  wire        flip_y = tile_attrs[6];
+  wire        pal_idx = tile_attrs[5:4];
+  wire        flip_x = tile_attrs[6];
+  wire        flip_y = tile_attrs[7];
 
   wire [ 1:0] color_idx_noflip = {tdata_show_data[15-tile_x], tdata_show_data[7-tile_x]};
   wire [ 1:0] color_idx_yesflip = {tdata_show_data[8+tile_x], tdata_show_data[tile_x]};
