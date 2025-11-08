@@ -117,10 +117,10 @@ module pl_interrupt_control (
     trap_pc     = 0;
     trap_stages = 0;
 
+    next_state  = state;
+
     case (state)
       S_IDLE: begin
-        next_state = state;
-
         if (irq_pending) begin
           trap_stages = 1;
           flush_m     = 1;
@@ -149,6 +149,9 @@ module pl_interrupt_control (
 
         trap_pc     = 1;
         next_state  = S_IDLE;
+      end
+      default: begin
+        next_state = S_IDLE;
       end
     endcase
   end
@@ -282,24 +285,30 @@ module pipelined_cpu (
   reg         bubble_d;
 
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || trap_mret || (!trap_stages && flush_d) || flush_d_irq) begin
+    if (!rst_n) begin
       instr_d     <= 32'h00000013;  // nop
       pc_d        <= {32{1'bx}};
       pc_plus_4_d <= {32{1'bx}};
       bubble_d    <= 1;
     end else begin
-      if ((trap_stages || !stall_d) && !stall_d_irq) begin
-        instr_d     <= instr_data;
-        pc_d        <= pc_f;
-        pc_plus_4_d <= pc_plus_4_f;
-        bubble_d    <= 0;
+      if (trap_mret || (!trap_stages && flush_d) || flush_d_irq) begin
+        instr_d     <= 32'h00000013;  // nop
+        pc_d        <= {32{1'bx}};
+        pc_plus_4_d <= {32{1'bx}};
+        bubble_d    <= 1;
+      end else begin
+        if ((trap_stages || !stall_d) && !stall_d_irq) begin
+          instr_d     <= instr_data;
+          pc_d        <= pc_f;
+          pc_plus_4_d <= pc_plus_4_f;
+          bubble_d    <= 0;
+        end
       end
     end
   end
 
   wire [ 2:0] funct3_d = instr_d[14:12];
 
-  wire [ 1:0] pc_src_d;
   wire [ 2:0] branch_type_d;
   wire [ 1:0] result_src_d;
   wire [ 3:0] mem_write_d;
@@ -401,7 +410,32 @@ module pipelined_cpu (
   reg        bubble_e;
 
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || (!trap_stages && flush_e) || flush_e_irq) begin
+    if (!rst_n) begin
+      regw_src_e         <= 0;
+      reg_write_e        <= 0;
+      csr_write_e        <= 0;
+      result_src_e       <= `RESULT_SRC_ALU;
+      mem_write_e        <= 0;
+      data_ext_control_e <= 4'b0000;
+      alu_control_e      <= 4'b0000;
+      alu_src_a_e        <= 0;
+      alu_src_b_e        <= 0;
+      csr_addr_e         <= 0;
+
+      rd1_e              <= 32'b0;
+      rd2_e              <= 32'b0;
+      csr_data_e         <= 32'b0;
+      pc_e               <= {32{1'bx}};
+      rs1_e              <= 0;
+      rs2_e              <= 0;
+      rd_e               <= 0;
+      imm_ext_e          <= {32{1'bx}};
+      pc_plus_4_e        <= {32{1'bx}};
+      branch_type_e      <= `BRANCH_NONE;
+      funct3_e           <= 3'bxxx;
+
+      bubble_e           <= 1;
+    end else if ((!trap_stages && flush_e) || flush_e_irq) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
       csr_write_e        <= 0;
@@ -561,7 +595,7 @@ module pipelined_cpu (
   reg [31:0] pc_plus_4_m;
 
   always @(posedge clk or negedge rst_n) begin
-    if (!rst_n || flush_m_irq) begin
+    if (!rst_n) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
       csr_write_m        <= 0;
@@ -577,25 +611,41 @@ module pipelined_cpu (
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
     end else begin
-      regw_src_m         <= regw_src_e;
-      reg_write_m        <= reg_write_e;
-      csr_write_m        <= csr_write_e;
-      result_src_m       <= result_src_e;
-      mem_write_m        <= mem_write_e;
-      data_ext_control_m <= data_ext_control_e;
-      csr_addr_m         <= csr_addr_e;
+      if (flush_m_irq) begin
+        regw_src_m         <= 0;
+        reg_write_m        <= 0;
+        csr_write_m        <= 0;
+        result_src_m       <= `RESULT_SRC_ALU;
+        mem_write_m        <= 4'b0000;
+        data_ext_control_m <= 4'b0000;
+        csr_addr_m         <= 0;
 
-      csr_data_m         <= csr_data_e;
-      alu_result_m       <= alu_result_e;
-      write_data_m       <= write_data_e;
-      rd_m               <= rd_e;
-      pc_target_m        <= pc_target_e;
-      pc_plus_4_m        <= pc_plus_4_e;
+        csr_data_m         <= 32'b0;
+        alu_result_m       <= 32'b0;
+        write_data_m       <= 32'b0;
+        rd_m               <= 5'b0;
+        pc_target_m        <= {32{1'bx}};
+        pc_plus_4_m        <= {32{1'bx}};
+      end else begin
+        regw_src_m         <= regw_src_e;
+        reg_write_m        <= reg_write_e;
+        csr_write_m        <= csr_write_e;
+        result_src_m       <= result_src_e;
+        mem_write_m        <= mem_write_e;
+        data_ext_control_m <= data_ext_control_e;
+        csr_addr_m         <= csr_addr_e;
+
+        csr_data_m         <= csr_data_e;
+        alu_result_m       <= alu_result_e;
+        write_data_m       <= write_data_e;
+        rd_m               <= rd_e;
+        pc_target_m        <= pc_target_e;
+        pc_plus_4_m        <= pc_plus_4_e;
+      end
     end
   end
 
   wire [31:0] read_data_m;
-  reg  [31:0] reg_wd3_m;
 
   assign data_addr    = alu_result_m;
   assign data_wdata   = write_data_m;

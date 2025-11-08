@@ -65,6 +65,7 @@ module i2c_controller #(
     rdata_valid_next = rdata_valid;
     delay_next       = delay;
     scl_reg_next     = scl_reg;
+    scl_ctr_next     = scl_ctr;
     sda_reg_next     = sda_reg;
     bit_counter_next = bit_counter;
     wdata_buf_next   = wdata_buf;
@@ -368,12 +369,14 @@ module nes_bridge #(
 
   always @(*) begin
     i2c_start         = 0;
-    state_next        = state;
     i2c_cmd           = 0;
     i2c_wdata         = 8'bzzzz_zzzz;
+    i2c_wack          = 1'bx;
     read_ctr_next     = read_ctr;
     joypad_next       = joypad;
     joypad_valid_next = joypad_valid;
+
+    state_next        = state;
 
     case (state)
       S_IDLE: begin
