@@ -49,13 +49,23 @@ The **data memory** is organized as follows:
 | `0xC000'0000` |      2       |      LCD control      |
 | `0xE000'0000` |      4       |     Audio control     |
 
+All memory ranges left unspecified can be assumed to be mirrors of the rest,
+though they should not be used.
+
+On the other hand, the **instruction memory** lines are hardwired to RAM and
+nothing else, so instructions will never be read from anywhere other than RAM.
+
 #### Joypad control
 
 |  Range start  | Size (bytes) |                     Description                      |
 | :-----------: | :----------: | :--------------------------------------------------: |
 | `0x6000'0000` |      1       | Read: I2C ready status / Write: Start reading joypad |
-| `0x6000'0001` |      1       |   Joypad data valid (1 = valid, 0 = not yet valid)   |
+| `0x6000'0001` |      1       |  Joypad data status (1 = valid, 0 = not yet valid)   |
 | `0x6000'0002` |      1       |                     Joypad data                      |
+
+Any write to `0x6000'0000` signals the NES bridge module to begin reading the
+controller's data via I2C. The program must then wait for the _joypad data
+status_ to go high, indicating that the joypad data is now available.
 
 #### Video control
 
@@ -70,11 +80,11 @@ The **data memory** is organized as follows:
 | `0xC000'0000` |      1       | LCD instr/status |
 | `0xC000'0001` |      1       |     LCD data     |
 
-All memory ranges left unspecified can be assumed to be mirrors of the rest,
-though they should not be used.
+#### Audio control
 
-On the other hand, the **instruction memory** lines are hardwired to RAM and
-nothing else, so instructions will never be read from anywhere other than RAM.
+|  Range start  | Size (bytes) |   Description    |
+| :-----------: | :----------: | :--------------: |
+| `0xE000'0000` |      4       | Wave half period |
 
 ### Graphics
 
