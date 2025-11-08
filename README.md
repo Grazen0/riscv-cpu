@@ -43,11 +43,19 @@ The **data memory** is organized as follows:
 | `0x2000'0000` |      4       |      TRNG value       |
 | `0x4000'0000` |     128      | Video tile attributes |
 | `0x5000'0000` |     128      |    Video tile data    |
-| `0x6000'0000` |      1       |     Joypad input      |
+| `0x6000'0000` |      3       |    Joypad control     |
 | `0x8000'0000` |      32      |  Video palette data   |
 | `0xA000'0000` |      1       |     Video control     |
 | `0xC000'0000` |      2       |      LCD control      |
 | `0xE000'0000` |      4       |     Audio control     |
+
+#### Joypad control
+
+|  Range start  | Size (bytes) |                     Description                      |
+| :-----------: | :----------: | :--------------------------------------------------: |
+| `0x6000'0000` |      1       | Read: I2C ready status / Write: Start reading joypad |
+| `0x6000'0001` |      1       |   Joypad data valid (1 = valid, 0 = not yet valid)   |
+| `0x6000'0002` |      1       |                     Joypad data                      |
 
 #### Video control
 
