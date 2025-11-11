@@ -2,6 +2,9 @@
 set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
 create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
 
+set_property ALLOW_COMBINATORIAL_LOOPS TRUE [get_nets tachyon/seija/oscillator_a/wires[0]]
+set_property ALLOW_COMBINATORIAL_LOOPS TRUE [get_nets tachyon/seija/oscillator_b/wires[0]]
+
 ## Switches
 set_property -dict { PACKAGE_PIN V17   IOSTANDARD LVCMOS33 } [get_ports {rst_n}]
 #set_property -dict { PACKAGE_PIN V16   IOSTANDARD LVCMOS33 } [get_ports {sw[1]}]
