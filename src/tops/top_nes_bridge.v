@@ -5,8 +5,8 @@ module top_nes_bridge (
     input wire rst_n,
 
     output reg [7:0] led,
-    output wire scl,
-    output wire sda
+    inout wire scl_pin,
+    inout wire sda_pin
 );
   wire clk_half;
 
@@ -34,6 +34,10 @@ module top_nes_bridge (
   );
 `endif
 
+  wire scl_out;
+  wire sda_in;
+  wire sda_out;
+
   wire start;
 
   nes_bridge bridge (
@@ -42,11 +46,15 @@ module top_nes_bridge (
 
       .start(start),
 
-      .scl(scl),
-      .sda(sda)
+      .scl_out(scl_out),
+      .sda_in (sda_in),
+      .sda_out(sda_out)
   );
 
-  assign start = bridge.ready;
+  assign start   = bridge.ready;
+  assign scl_pin = ~scl_out ? 1'b0 : 1'bz;
+  assign sda_pin = ~sda_out ? 1'b0 : 1'bz;
+  assign sda_in  = sda_pin;
 
   always @(posedge clk_half or negedge rst_n) begin
     if (!rst_n) begin

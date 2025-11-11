@@ -4,8 +4,8 @@ module top_tachyon_rv (
     input wire clk,
     input wire rst_n,
 
-    output wire joypad_scl,
-    output wire joypad_sda,
+    inout wire joypad_scl_pin,
+    inout wire joypad_sda_pin,
 
     output wire [7:0] lcd_data,
     output wire [1:0] lcd_ctrl,
@@ -45,13 +45,18 @@ module top_tachyon_rv (
   );
 `endif
 
+  wire joypad_scl_out;
+  wire joypad_sda_in;
+  wire joypad_sda_out;
+
   tachyon_rv tachyon (
       .clk(clk_half),
       .clk_vga(clk_half),
       .rst_n(rst_n),
 
-      .joypad_scl(joypad_scl),
-      .joypad_sda(joypad_sda),
+      .joypad_scl_out(joypad_scl_out),
+      .joypad_sda_in (joypad_sda_in),
+      .joypad_sda_out(joypad_sda_out),
 
       .lcd_data  (lcd_data),
       .lcd_ctrl  (lcd_ctrl),
@@ -65,4 +70,8 @@ module top_tachyon_rv (
 
       .audio_out(audio_out)
   );
+
+  assign joypad_scl_pin = ~joypad_scl_out ? 1'b0 : 1'bz;
+  assign joypad_sda_pin = ~joypad_sda_out ? 1'b0 : 1'bz;
+  assign joypad_sda_in  = joypad_sda_pin;
 endmodule

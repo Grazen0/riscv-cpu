@@ -5,16 +5,16 @@ module top_nes_bridge_tb ();
   always #5 clk = ~clk;
 
   wire [7:0] led;
-  wire scl;
-  wire sda;
+  tri1 scl_pin;
+  tri1 sda_pin;
 
   top_nes_bridge top (
       .clk  (clk),
       .rst_n(rst_n),
       .led  (led),
 
-      .scl(scl),
-      .sda(sda)
+      .scl_pin(scl_pin),
+      .sda_pin(sda_pin)
   );
 
   initial begin

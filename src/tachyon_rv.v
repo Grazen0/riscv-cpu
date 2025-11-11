@@ -5,8 +5,9 @@ module tachyon_rv (
     input wire clk_vga,
     input wire rst_n,
 
-    output wire joypad_scl,
-    output wire joypad_sda,
+    output wire joypad_scl_out,
+    input  wire joypad_sda_in,
+    output wire joypad_sda_out,
 
     output wire [7:0] lcd_data,
     output wire [1:0] lcd_ctrl,
@@ -100,7 +101,7 @@ module tachyon_rv (
       .data_wenable(data_wenable),
       .data_rdata  (data_rdata),
 
-      .irq(~v_sync)
+      .irq(~h_sync)
   );
 
   wire [ 7:0] tattr_rdata;
@@ -112,15 +113,15 @@ module tachyon_rv (
       .wclk (clk),
       .rst_n(rst_n),
 
-      .tattr_addr(data_addr[9:0]),
-      .tattr_wdata(data_wdata[7:0]),
+      .tattr_addr   (data_addr[9:0]),
+      .tattr_wdata  (data_wdata[7:0]),
       .tattr_wenable(data_wenable[0] && data_select == SEL_VTATTR),
-      .tattr_rdata(tattr_rdata),
+      .tattr_rdata  (tattr_rdata),
 
-      .tdata_addr(data_addr[7:0]),
-      .tdata_wdata(data_wdata[15:0]),
+      .tdata_addr   (data_addr[7:0]),
+      .tdata_wdata  (data_wdata[15:0]),
       .tdata_wenable(data_wenable[1:0] & {2{data_select == SEL_VTDATA}}),
-      .tdata_rdata(tdata_rdata),
+      .tdata_rdata  (tdata_rdata),
 
       .pal_addr   (data_addr[4:1]),
       .pal_wdata  (data_wdata[11:0]),
@@ -172,9 +173,10 @@ module tachyon_rv (
       .start(data_wenable[0] && data_select == SEL_JOYPAD),
 
       .rdata_addr(data_addr[1:0]),
-      .rdata(joypad_rdata),
+      .rdata     (joypad_rdata),
 
-      .scl(joypad_scl),
-      .sda(joypad_sda)
+      .scl_out(joypad_scl_out),
+      .sda_in (joypad_sda_in),
+      .sda_out(joypad_sda_out)
   );
 endmodule

@@ -156,7 +156,7 @@ module video_unit (
     endcase
   end
 
-  always @(posedge wclk) begin
+  always @(posedge wclk or negedge rst_n) begin
     if (!rst_n) begin
       display_on <= 0;
     end else begin

@@ -52,11 +52,14 @@ typedef struct {
 
 constexpr size_t VIDEO_TDATA_SIZE = 16 * 8;
 
-constexpr u8 JP_CENTER = 1 << 0;
-constexpr u8 JP_UP = 1 << 1;
-constexpr u8 JP_LEFT = 1 << 2;
-constexpr u8 JP_RIGHT = 1 << 3;
-constexpr u8 JP_DOWN = 1 << 4;
+constexpr u8 JP_RIGHT = 1 << 0;
+constexpr u8 JP_LEFT = 1 << 1;
+constexpr u8 JP_DOWN = 1 << 2;
+constexpr u8 JP_UP = 1 << 3;
+constexpr u8 JP_START = 1 << 4;
+constexpr u8 JP_SELECT = 1 << 5;
+constexpr u8 JP_B = 1 << 6;
+constexpr u8 JP_A = 1 << 7;
 
 constexpr size_t TRNG_BASE = 0x2000'0000;
 constexpr size_t VTATTR_BASE = 0x4000'0000;

@@ -19,7 +19,7 @@ module nes_bridge_tb ();
       .rdata(rdata),
 
       .scl(scl),
-      .sda(sda)
+      .sda_out(sda)
   );
 
   initial begin

@@ -12,7 +12,7 @@ module i2c_controller #(
     input wire rst_n,
 
     input wire [1:0] cmd,
-    input wire start,
+    input wire       start,
 
     // In case of write:
     input wire [7:0] wdata,  // Byte to be written
@@ -24,8 +24,9 @@ module i2c_controller #(
 
     // TODO: add ack checking
 
-    output tri1 scl,
-    output tri1 sda
+    output wire scl_out,
+    input  wire sda_in,
+    output wire sda_out
 );
   localparam S_IDLE = 5'd0;
 
@@ -159,7 +160,7 @@ module i2c_controller #(
         state_next   = S_READ_ACK_READ;
 
         if (transition_incoming) begin
-          ack_next = sda;
+          ack_next = sda_in;
         end
       end
       S_READ_ACK_READ: begin
@@ -181,7 +182,7 @@ module i2c_controller #(
 
         if (transition_incoming) begin
           bit_ctr_next = bit_ctr + 1;
-          rdata_next = {rdata[6:0], sda};
+          rdata_next = {rdata[6:0], sda_in};
           rdata_valid_next = bit_ctr_next == 0;
         end
       end
@@ -191,7 +192,6 @@ module i2c_controller #(
       end
       S_READ_CLK_DOWN: begin
         delay_target = SCL_PERIOD / 2;
-
         state_next   = bit_ctr == 0 ? S_WRITE_ACK_SETUP : S_READ_CLK_UP;
       end
       S_WRITE_ACK_SETUP: begin
@@ -287,10 +287,10 @@ module i2c_controller #(
     end
   end
 
-  assign ready = state == S_IDLE;
+  assign ready   = state == S_IDLE;
 
-  assign scl   = scl_reg ? 1'bz : 1'b0;
-  assign sda   = sda_reg ? 1'bz : 1'b0;
+  assign scl_out = scl_reg;
+  assign sda_out = sda_reg;
 endmodule
 
 module nes_bridge #(
@@ -302,8 +302,9 @@ module nes_bridge #(
 
     input wire start,
 
-    output wire scl,
-    output wire sda,
+    output wire scl_out,
+    input  wire sda_in,
+    output wire sda_out,
 
     // 00: ready
     // 01: joypad_valid
@@ -353,8 +354,9 @@ module nes_bridge #(
       .ready(i2c_ready),
       .rdata(i2c_rdata),
 
-      .scl(scl),
-      .sda(sda)
+      .scl_out(scl_out),
+      .sda_in (sda_in),
+      .sda_out(sda_out)
   );
 
   always @(*) begin

@@ -2,8 +2,6 @@
 set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
 create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
 
-create_generated_clock -add -name clk_half -source [get_pins u_mmcm/CLKIN1] -divide_by 2 [get_pins u_mmcm/CLKOUT0]
-
 ## Switches
 set_property -dict { PACKAGE_PIN V17   IOSTANDARD LVCMOS33 } [get_ports {rst_n}]
 #set_property -dict { PACKAGE_PIN V16   IOSTANDARD LVCMOS33 } [get_ports {sw[1]}]
@@ -102,8 +100,8 @@ set_property -dict { PACKAGE_PIN J3   IOSTANDARD LVCMOS33 } [get_ports {lcd_ctrl
 set_property -dict { PACKAGE_PIN L3   IOSTANDARD LVCMOS33 } [get_ports {lcd_ctrl[1]}];#Sch name = XA2_P
 set_property -dict { PACKAGE_PIN M2   IOSTANDARD LVCMOS33 } [get_ports {lcd_enable}];#Sch name = XA3_P
 set_property -dict { PACKAGE_PIN N2   IOSTANDARD LVCMOS33 } [get_ports {audio_out}];#Sch name = XA4_P
-set_property -dict { PACKAGE_PIN K3   IOSTANDARD LVCMOS33 } [get_ports {joypad_scl}];#Sch name = XA1_N
-set_property -dict { PACKAGE_PIN M3   IOSTANDARD LVCMOS33 } [get_ports {joypad_sda}];#Sch name = XA2_N
+set_property -dict { PACKAGE_PIN K3   IOSTANDARD LVCMOS33 } [get_ports {joypad_scl_pin}];#Sch name = XA1_N
+set_property -dict { PACKAGE_PIN M3   IOSTANDARD LVCMOS33 } [get_ports {joypad_sda_pin}];#Sch name = XA2_N
 #set_property -dict { PACKAGE_PIN M1   IOSTANDARD LVCMOS33 } [get_ports {JXADC[6]}];#Sch name = XA3_N
 #set_property -dict { PACKAGE_PIN N1   IOSTANDARD LVCMOS33 } [get_ports {JXADC[7]}];#Sch name = XA4_N
 

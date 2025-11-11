@@ -172,15 +172,19 @@ static inline void fixed_loop(void)
 {
     audio_tick();
 
-    const u8 joypad = joypad_read();
+    const u8 joypad = 0;
+    // const u8 joypad = joypad_read();
 
-    if (snake_dir != DIR_DOWN && (joypad & JP_UP) != 0)
+    lcd_print_hex(joypad);
+    lcd_print("\n");
+
+    if (snake_dir != DIR_DOWN && (joypad & JP_UP) == 0)
         dir_next = DIR_UP;
-    else if (snake_dir != DIR_RIGHT && (joypad & JP_LEFT) != 0)
+    else if (snake_dir != DIR_RIGHT && (joypad & JP_LEFT) == 0)
         dir_next = DIR_LEFT;
-    else if (snake_dir != DIR_LEFT && (joypad & JP_RIGHT) != 0)
+    else if (snake_dir != DIR_LEFT && (joypad & JP_RIGHT) == 0)
         dir_next = DIR_RIGHT;
-    else if (snake_dir != DIR_UP && (joypad & JP_DOWN) != 0)
+    else if (snake_dir != DIR_UP && (joypad & JP_DOWN) == 0)
         dir_next = DIR_DOWN;
 
     static constexpr size_t STEP_DELAY = 1;
@@ -202,10 +206,6 @@ void main(void)
     audio_init();
     video_init();
     rand_seed();
-
-    const u8 joypad = joypad_read();
-    lcd_print_hex(joypad);
-    lcd_print("\n");
 
     video_load_palette(0, snake_palette);
     video_load_palette(1, apple_palette);

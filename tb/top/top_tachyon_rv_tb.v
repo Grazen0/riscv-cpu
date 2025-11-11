@@ -16,15 +16,15 @@ module top_tachyon_rv_tb ();
 
   wire       audio_out;
 
-  wire       joypad_scl;
-  wire       joypad_sda;
+  tri1       joypad_scl_pin;
+  tri1       joypad_sda_pin;
 
   top_tachyon_rv top (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .joypad_scl(joypad_scl),
-      .joypad_sda(joypad_sda),
+      .joypad_scl_pin(joypad_scl_pin),
+      .joypad_sda_pin(joypad_sda_pin),
 
       .lcd_data  (lcd_data),
       .lcd_ctrl  (lcd_ctrl),

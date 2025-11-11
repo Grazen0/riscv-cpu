@@ -21,11 +21,13 @@ module ring_oscillator #(
 
   assign out = wires[0];
 
+`ifdef IVERILOG
   // For simulation purposes
   initial begin
     force wires[0] = 1'b0;
     #(SIZE * DELAY) release wires[0];
   end
+`endif
 endmodule
 
 module trng #(
