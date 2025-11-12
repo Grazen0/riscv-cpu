@@ -19,13 +19,13 @@ void lcd_print(const char *restrict s)
         lcd_print_char(*s++);
 }
 
-void lcd_print_n(const char *const restrict s, size_t n)
+void lcd_print_n(const char *restrict s, size_t n)
 {
-    for (size_t i = 0; i < n; ++i)
-        lcd_print_char(s[i]);
+    while (n-- > 0)
+        lcd_print_char(*s++);
 }
 
-void lcd_print_int(int n)
+void lcd_print_int(const int n)
 {
     if (n == 0) {
         lcd_print_char('0');
@@ -52,7 +52,7 @@ void lcd_print_int(int n)
         lcd_print_char('0' + digits[j]);
 }
 
-void lcd_print_hex(u32 n)
+void lcd_print_hex(const u32 n)
 {
     for (size_t i = 0; i < 8; ++i) {
         const u8 nib = (n >> (4 * (7 - i))) & 0xF;
