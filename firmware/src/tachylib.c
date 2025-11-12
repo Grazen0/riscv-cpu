@@ -81,6 +81,11 @@ void video_load_tdata(const size_t tdata_idx, const u16 data[])
         VTDATA[(8 * tdata_idx) + i] = data[i];
 }
 
+void video_set_tile(const u8 tx, const u8 ty, const u8 tattr)
+{
+    VTATTR[(ty * VIDEO_TILES_H) + tx] = tattr;
+}
+
 static size_t audio_timer = 0;
 
 void audio_init(void)

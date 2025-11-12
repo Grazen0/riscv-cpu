@@ -192,7 +192,7 @@ module video_unit (
   end
 
   wire [ 3:0] tdata_idx = tile_attrs[3:0];
-  wire        pal_idx = tile_attrs[5:4];
+  wire [ 1:0] pal_idx = tile_attrs[5:4];
   wire        flip_x = tile_attrs[6];
   wire        flip_y = tile_attrs[7];
 
