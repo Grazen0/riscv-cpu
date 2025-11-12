@@ -101,7 +101,7 @@ module tachyon_rv (
       .data_wenable(data_wenable),
       .data_rdata  (data_rdata),
 
-      .irq(~h_sync)
+      .irq(~v_sync)
   );
 
   wire [ 7:0] tattr_rdata;
