@@ -9,7 +9,7 @@
 
 typedef enum : u32 {
     NOTE_NONE = 0,
-    NOTE_A4 = FREQ_TO_HALF_PERIOD(392),
+    NOTE_A4 = FREQ_TO_HALF_PERIOD(440),
 } MusicNote;
 
 void lcd_send_instr(u8 instr);

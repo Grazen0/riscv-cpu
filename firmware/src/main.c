@@ -43,7 +43,7 @@ static constexpr u8 TATTR_SNAKE_HEAD[] = {
     [DIR_LEFT] = 0b1000'0001,
 };
 
-static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H_VISIBLE * VIDEO_TILES_V;
+static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H * VIDEO_TILES_V;
 
 static Position snake[SNAKE_CAPACITY];
 static size_t snake_size;
@@ -91,21 +91,21 @@ static inline void game_step(void)
 
     const Position prev_tail = snake[snake_size - 1];
 
-    for (size_t i = 1; i < snake_size; ++i)
+    for (size_t i = snake_size - 1; i > 0; --i)
         snake[i] = snake[i - 1];
 
     Position *const head = &snake[0];
 
     switch (snake_dir) {
     case DIR_RIGHT:
-        if (head->x >= VIDEO_TILES_H_VISIBLE - 1)
+        if (head->x >= VIDEO_TILES_H - 1)
             head->x = 0;
         else
             ++head->x;
         break;
     case DIR_LEFT:
         if (head->x == 0)
-            head->x = VIDEO_TILES_H_VISIBLE - 1;
+            head->x = VIDEO_TILES_H - 1;
         else
             --head->x;
         break;
@@ -172,22 +172,23 @@ static inline void fixed_loop(void)
 {
     audio_tick();
 
-    const u8 joypad = 0;
-    // const u8 joypad = joypad_read();
+    const u8 joypad = joypad_read();
 
-    lcd_print_hex(joypad);
-    lcd_print("\n");
+    const bool up = (joypad & JP_UP) == 0;
+    const bool left = (joypad & JP_LEFT) == 0;
+    const bool right = (joypad & JP_RIGHT) == 0;
+    const bool down = (joypad & JP_DOWN) == 0;
 
-    if (snake_dir != DIR_DOWN && (joypad & JP_UP) == 0)
+    if (snake_dir != DIR_DOWN && up)
         dir_next = DIR_UP;
-    else if (snake_dir != DIR_RIGHT && (joypad & JP_LEFT) == 0)
+    else if (snake_dir != DIR_RIGHT && left)
         dir_next = DIR_LEFT;
-    else if (snake_dir != DIR_LEFT && (joypad & JP_RIGHT) == 0)
+    else if (snake_dir != DIR_LEFT && right)
         dir_next = DIR_RIGHT;
-    else if (snake_dir != DIR_UP && (joypad & JP_DOWN) == 0)
+    else if (snake_dir != DIR_UP && down)
         dir_next = DIR_DOWN;
 
-    static constexpr size_t STEP_DELAY = 1;
+    static constexpr size_t STEP_DELAY = 36;
     static size_t step_timer = 0;
 
     ++step_timer;
@@ -201,7 +202,7 @@ static inline void fixed_loop(void)
 void main(void)
 {
     enable_irq = false;
-    VCTRL->display_on = false;
+    VCTRL->display_on = true;
 
     audio_init();
     video_init();
