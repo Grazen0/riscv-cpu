@@ -1,11 +1,7 @@
 {
   pkgs ? import <nixpkgs> { },
+  riscvPkgs,
 }:
-let
-  riscvPkgs = import <nixpkgs> {
-    crossSystem.config = "riscv32-none-elf";
-  };
-in
 pkgs.mkShell {
   hardeningDisable = [
     "relro"
