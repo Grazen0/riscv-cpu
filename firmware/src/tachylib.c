@@ -60,15 +60,6 @@ void lcd_print_hex(const u32 n)
     }
 }
 
-void video_init(void)
-{
-    for (size_t i = 0; i < VTATTR_SIZE; ++i)
-        VTATTR[i] = 0;
-
-    for (size_t i = 0; i < VIDEO_TDATA_SIZE; ++i)
-        VTDATA[i] = 0;
-}
-
 void video_load_palette(const size_t pal_idx, const u16 palette[])
 {
     for (size_t i = 0; i < VIDEO_PALETTE_SIZE; ++i)

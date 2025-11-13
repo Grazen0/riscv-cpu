@@ -20,7 +20,7 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 CFLAGS := $(INC_FLAGS) -march=rv32i_zicsr -mabi=ilp32 -std=c23 -Oz -g \
 		  -ffunction-sections -fdata-sections -ffreestanding \
-		  -nostdlib -nostartfiles -static
+		  -specs=nano.specs -nostartfiles -static
 LDFLAGS := --no-warn-rwx-segments,--gc-sections
 
 CC := riscv32-none-elf-gcc

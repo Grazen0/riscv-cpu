@@ -13,6 +13,11 @@ typedef enum : u8 {
     DIR_LEFT,
 } Direction;
 
+static inline Direction dir_opposite(const Direction dir)
+{
+    return (dir + 2) % 4;
+}
+
 typedef struct {
     u8 x;
     u8 y;
@@ -25,24 +30,31 @@ typedef enum : u8 {
 } PaletteIdx;
 
 static constexpr u16 PALDATA_SNAKE[] = {
-    0x000, // black
+    0xAD5, // green
     0xFFF, // white
-    0x00F, // blue
-    0x11A, // darker blue
+    0x47F, // blue
+    0x149, // darker blue
+};
+
+static constexpr u16 PALDATA_SNAKE_LOSE[] = {
+    0xAD5, // green
+    0xFFF, // white
+    0x777, // gray
+    0x555, // darker gray
 };
 
 static constexpr u16 PALDATA_APPLE[] = {
-    0x000, // black
-    0xFFF, // white
-    0xF00, // red
-    0x632, // brown-ish
+    0xAD5, // green
+    0xE42, // red
+    0x975, // brown
+    0x4C2, // dark green
 };
 
 static constexpr u16 PALDATA_BG[] = {
-    0x000, // black
-    0x000, // black
-    0x000, // black
-    0x666, // gray
+    0xAD5, // green
+    0xAD5, // green
+    0xAD5, // green
+    0x583, // gray (for walls)
 };
 
 typedef enum : u8 {
@@ -54,6 +66,8 @@ typedef enum : u8 {
     SPR_SNAKE_BODY_DOWN,
     SPR_WALL,
     SPR_SNAKE_BODY_TURN,
+    SPR_SNAKE_TAIL_RIGHT,
+    SPR_SNAKE_TAIL_DOWN,
 } SpriteIdx;
 
 // Calculates a tattr value based on:
@@ -90,12 +104,27 @@ static constexpr u8 TATTR_SNAKE_BODY_TURN[] = {
     [DIR_LEFT] = MK_TATTR(SPR_SNAKE_BODY_TURN, PAL_SNAKE, TF_FLIP_Y),
 };
 
+static constexpr u8 TATTR_SNAKE_TAIL[] = {
+    [DIR_UP] = MK_TATTR(SPR_SNAKE_TAIL_DOWN, PAL_SNAKE, TF_FLIP_Y),
+    [DIR_RIGHT] = MK_TATTR(SPR_SNAKE_TAIL_RIGHT, PAL_SNAKE, 0),
+    [DIR_DOWN] = MK_TATTR(SPR_SNAKE_TAIL_DOWN, PAL_SNAKE, 0),
+    [DIR_LEFT] = MK_TATTR(SPR_SNAKE_TAIL_RIGHT, PAL_SNAKE, TF_FLIP_X),
+};
+
+typedef struct {
+    Position pos;
+    Direction dir;
+} SnakePart;
+
 static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H * VIDEO_TILES_V;
-static Position snake[SNAKE_CAPACITY];
+static SnakePart snake[SNAKE_CAPACITY];
 static size_t snake_size;
-static Direction snake_dir;
 static Direction dir_next;
 static Position apple;
+
+static constexpr size_t STEP_DELAY_CAP = 8;
+static bool dead;
+static size_t step_delay;
 
 typedef struct {
     u8 tx;
@@ -131,67 +160,116 @@ static inline void draw_buf_flush(void)
     draw_buf_size = 0;
 }
 
+static void randomize_apple(void)
+{
+    static Position candidates[(VIDEO_TILES_H - 2) * (VIDEO_TILES_V - 2)];
+
+    size_t candidates_size = 0;
+
+    for (size_t i = 1; i < VIDEO_TILES_H - 1; ++i) {
+        for (size_t j = 1; j < VIDEO_TILES_V - 1; ++j) {
+            for (size_t k = 0; k < snake_size; ++k) {
+                if (i == snake[k].pos.x && j == snake[k].pos.y)
+                    goto skip_tile;
+            }
+
+            candidates[candidates_size] = (Position){.x = i, .y = j};
+            ++candidates_size;
+skip_tile:
+        }
+    }
+
+    const size_t choice = rand_get() % candidates_size;
+    apple = candidates[choice];
+}
+
 static inline void game_step(void)
 {
-    const Direction prev_dir = snake_dir;
-    snake_dir = dir_next;
+    if (dead)
+        return;
 
-    const Position prev_tail = snake[snake_size - 1];
+    SnakePart *const head = &snake[0];
+
+    const Direction prev_dir = head->dir;
+    head->dir = dir_next;
+
+    const SnakePart prev_tail = snake[snake_size - 1];
 
     for (size_t i = snake_size - 1; i > 0; --i)
         snake[i] = snake[i - 1];
 
-    Position *const head = &snake[0];
-
-    switch (snake_dir) {
+    switch (head->dir) {
     case DIR_RIGHT:
-        if (head->x >= VIDEO_TILES_H - 1)
-            head->x = 0;
+        if (head->pos.x >= VIDEO_TILES_H - 2)
+            dead = true;
         else
-            ++head->x;
+            ++head->pos.x;
         break;
     case DIR_LEFT:
-        if (head->x == 0)
-            head->x = VIDEO_TILES_H - 1;
+        if (head->pos.x <= 1)
+            dead = true;
         else
-            --head->x;
+            --head->pos.x;
         break;
     case DIR_UP:
-        if (head->y == 0)
-            head->y = VIDEO_TILES_V - 1;
+        if (head->pos.y <= 1)
+            dead = true;
         else
-            --head->y;
+            --head->pos.y;
         break;
     case DIR_DOWN:
-        if (head->y >= VIDEO_TILES_V - 1)
-            head->y = 0;
+        if (head->pos.y >= VIDEO_TILES_V - 2)
+            dead = true;
         else
-            ++head->y;
+            ++head->pos.y;
         break;
     }
 
-    if (head->x == apple.x && head->y == apple.y) {
+    if (!dead) {
+        for (size_t i = 1; i < snake_size; ++i) {
+            if (head->pos.x == snake[i].pos.x && head->pos.y == snake[i].pos.y) {
+                dead = true;
+                break;
+            }
+        }
+    }
+
+    if (dead) {
+        // TODO: buffer this
+        video_load_palette(PAL_SNAKE, PALDATA_SNAKE_LOSE);
+        return;
+    }
+
+    if (head->pos.x == apple.x && head->pos.y == apple.y) {
         // Ate an apple
         ++snake_size;
         snake[snake_size - 1] = prev_tail;
 
-        // We need a new apple
-        // TODO:generate random apple position
-        ++apple.y;
+        if (step_delay > STEP_DELAY_CAP && (snake_size % 2) == 0)
+            step_delay--;
 
+        randomize_apple();
         draw_buf_push(apple.x, apple.y, TATTR_APPLE);
+
         audio_play_note(NOTE_A4, 18);
     } else {
-        draw_buf_push(prev_tail.x, prev_tail.y, TATTR_BACKGROUND);
+        draw_buf_push(prev_tail.pos.x, prev_tail.pos.y, TATTR_BACKGROUND);
     }
 
-    if (snake_size == 2) {
-        draw_buf_push(snake[1].x, snake[1].y, TATTR_SNAKE_BODY[snake_dir]);
-    } else if (snake_size > 2) {
-        draw_buf_push(snake[1].x, snake[1].y, TATTR_SNAKE_BODY_TURN[snake_dir]);
+    const SnakePart tail = snake[snake_size - 1];
+
+    if (snake_size > 2) {
+        if (head->dir == prev_dir)
+            draw_buf_push(snake[1].pos.x, snake[1].pos.y, TATTR_SNAKE_BODY[head->dir]);
+        else if (head->dir == (prev_dir + 1) % 4)
+            draw_buf_push(snake[1].pos.x, snake[1].pos.y, TATTR_SNAKE_BODY_TURN[head->dir]);
+        else
+            draw_buf_push(snake[1].pos.x, snake[1].pos.y,
+                          TATTR_SNAKE_BODY_TURN[dir_opposite(prev_dir)]);
     }
 
-    draw_buf_push(snake[0].x, snake[0].y, TATTR_SNAKE_HEAD[snake_dir]);
+    draw_buf_push(tail.pos.x, tail.pos.y, TATTR_SNAKE_TAIL[tail.dir]);
+    draw_buf_push(head->pos.x, head->pos.y, TATTR_SNAKE_HEAD[head->dir]);
 }
 
 static bool sleeping;
@@ -206,7 +284,6 @@ static void wait_frame(void (*const wait_fn)())
 
 static bool enable_irq;
 static bool paused;
-static bool dead;
 
 __attribute__((interrupt)) void irq_handler(void)
 {
@@ -262,6 +339,36 @@ static void loop(void)
     rand_update();
 }
 
+static void game_init(void)
+{
+    // TODO: buffer this
+    video_load_palette(PAL_SNAKE, PALDATA_SNAKE);
+
+    // Background grass
+    for (size_t x = 1; x < VIDEO_TILES_H - 1; ++x) {
+        for (size_t y = 1; y < VIDEO_TILES_V - 1; ++y)
+            video_set_tile(x, y, TATTR_BACKGROUND);
+    }
+
+    snake[0] = (SnakePart){
+        .pos = {.x = VIDEO_TILES_H / 4, .y = VIDEO_TILES_V / 2},
+        .dir = DIR_RIGHT,
+    };
+    snake_size = 1;
+
+    dir_next = snake[0].dir;
+    step_delay = 18;
+
+    apple = snake[0].pos;
+    apple.x += VIDEO_TILES_H / 2;
+
+    paused = false;
+    dead = false;
+
+    draw_buf_push(snake[0].pos.x, snake[0].pos.y, TATTR_SNAKE_HEAD[snake[0].dir]);
+    draw_buf_push(apple.x, apple.y, TATTR_APPLE);
+}
+
 // Runs at @ ~72 Hz
 static inline void fixed_loop(void)
 {
@@ -300,9 +407,15 @@ static inline void fixed_loop(void)
     }
 
     if (start_pressed) {
-        paused = true;
+        if (!dead)
+            paused = true;
+        else
+            game_init();
+
         return;
     }
+
+    const Direction snake_dir = snake[0].dir;
 
     if (snake_dir != DIR_DOWN && up)
         dir_next = DIR_UP;
@@ -313,12 +426,11 @@ static inline void fixed_loop(void)
     else if (snake_dir != DIR_UP && down)
         dir_next = DIR_DOWN;
 
-    static constexpr size_t STEP_DELAY = 18;
     static size_t step_timer = 0;
 
     ++step_timer;
 
-    if (step_timer >= STEP_DELAY) {
+    if (step_timer >= step_delay) {
         step_timer = 0;
         game_step();
     }
@@ -330,7 +442,6 @@ void main(void)
     VCTRL->display_on = false;
 
     audio_init();
-    video_init();
     rand_seed();
 
     video_load_palette(PAL_SNAKE, PALDATA_SNAKE);
@@ -345,6 +456,8 @@ void main(void)
     extern const u8 TDATA_SNAKE_BODY_DOWN[];
     extern const u8 TDATA_WALL[];
     extern const u8 TDATA_SNAKE_BODY_TURN[];
+    extern const u8 TDATA_SNAKE_TAIL_RIGHT[];
+    extern const u8 TDATA_SNAKE_TAIL_DOWN[];
 
     video_load_tdata(SPR_BACKGROUND, (const u16 *)TDATA_BACKGROUND);
     video_load_tdata(SPR_APPLE, (const u16 *)TDATA_APPLE);
@@ -354,17 +467,8 @@ void main(void)
     video_load_tdata(SPR_SNAKE_BODY_DOWN, (const u16 *)TDATA_SNAKE_BODY_DOWN);
     video_load_tdata(SPR_WALL, (const u16 *)TDATA_WALL);
     video_load_tdata(SPR_SNAKE_BODY_TURN, (const u16 *)TDATA_SNAKE_BODY_TURN);
-
-    // Initialize game
-    snake[0] = (Position){.y = 1, .x = 1};
-    snake_size = 1;
-    snake_dir = DIR_RIGHT;
-    dir_next = snake_dir;
-    apple = (Position){.y = 1, .x = 3};
-    paused = false;
-
-    video_set_tile(snake[0].x, snake[0].y, TATTR_SNAKE_HEAD[snake_dir]);
-    video_set_tile(apple.x, apple.y, TATTR_APPLE);
+    video_load_tdata(SPR_SNAKE_TAIL_RIGHT, (const u16 *)TDATA_SNAKE_TAIL_RIGHT);
+    video_load_tdata(SPR_SNAKE_TAIL_DOWN, (const u16 *)TDATA_SNAKE_TAIL_DOWN);
 
     // Top and bottom borders
     for (size_t x = 0; x < VIDEO_TILES_H; ++x) {
@@ -377,6 +481,8 @@ void main(void)
         video_set_tile(0, y, TATTR_WALL);
         video_set_tile(VIDEO_TILES_H - 1, y, TATTR_WALL);
     }
+
+    game_init();
 
     enable_irq = true;
 

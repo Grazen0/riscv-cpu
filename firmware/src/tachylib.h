@@ -33,8 +33,6 @@ void lcd_print_int(int n);
 
 void lcd_print_hex(u32 n);
 
-void video_init(void);
-
 void video_load_palette(size_t pal_idx, const u16 palette[]);
 
 void video_load_tdata(const size_t tdata_idx, const u16 data[]);

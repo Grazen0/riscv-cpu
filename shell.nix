@@ -17,5 +17,6 @@ pkgs.mkShell {
 
     riscvPkgs.buildPackages.binutils
     riscvPkgs.buildPackages.gcc
+    riscvPkgs.newlib-nano
   ];
 }
