@@ -5,10 +5,16 @@
 #include "tachyon.h"
 #include <stddef.h>
 
+typedef struct {
+    u32 half_period;
+    u32 duration;
+} AudioSequencePart;
+
 #define FREQ_TO_HALF_PERIOD(freq) (CLOCK_FREQ / (2 * freq))
 
 typedef enum : u32 {
     NOTE_NONE = 0,
+    NOTE_C2 = FREQ_TO_HALF_PERIOD(65),
     NOTE_F3 = FREQ_TO_HALF_PERIOD(174),
     NOTE_G3 = FREQ_TO_HALF_PERIOD(196),
     NOTE_A3 = FREQ_TO_HALF_PERIOD(220),
@@ -44,6 +50,8 @@ void audio_init(void);
 void audio_tick(void);
 
 void audio_play_note(MusicNote note, size_t duration);
+
+void audio_play_sequence(const AudioSequencePart seq[], const size_t n);
 
 u8 joypad_read(void);
 

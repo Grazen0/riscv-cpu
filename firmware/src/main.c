@@ -235,6 +235,7 @@ static inline void game_step(void)
     }
 
     if (dead) {
+        audio_play_note(NOTE_C2, 36);
         // TODO: buffer this
         video_load_palette(PAL_SNAKE, PALDATA_SNAKE_LOSE);
         return;
@@ -251,7 +252,7 @@ static inline void game_step(void)
         randomize_apple();
         draw_buf_push(apple.x, apple.y, TATTR_APPLE);
 
-        audio_play_note(NOTE_A4, 18);
+        audio_play_note(NOTE_A4, 9);
     } else {
         draw_buf_push(prev_tail.pos.x, prev_tail.pos.y, TATTR_BACKGROUND);
     }
@@ -295,43 +296,6 @@ __attribute__((interrupt)) void irq_handler(void)
 
     draw_buf_flush();
     sleeping = false;
-
-    if (audio_timer-- <= 0) {
-        switch (audio_idx) {
-        case 0:
-            audio_play_note(NOTE_E4, 30);
-            audio_timer = 36;
-            break;
-        case 1:
-            audio_play_note(NOTE_B3, 12);
-            audio_timer = 18;
-            break;
-        case 2:
-            audio_play_note(NOTE_C4, 12);
-            audio_timer = 18;
-            break;
-        case 3:
-            audio_play_note(NOTE_D4, 30);
-            audio_timer = 36;
-            break;
-        case 4:
-            audio_play_note(NOTE_C4, 12);
-            audio_timer = 18;
-            break;
-        case 5:
-            audio_play_note(NOTE_B3, 12);
-            audio_timer = 18;
-            break;
-        case 6:
-            audio_play_note(NOTE_A3, 30);
-            audio_timer = 36;
-            break;
-        default:
-            break;
-        }
-
-        ++audio_idx;
-    }
 }
 
 static void loop(void)
@@ -385,32 +349,26 @@ static inline void fixed_loop(void)
     const bool left = (joypad & JP_LEFT) == 0;
     const bool right = (joypad & JP_RIGHT) == 0;
     const bool down = (joypad & JP_DOWN) == 0;
-    const bool select = (joypad & JP_SELECT) == 0;
-    const bool start = (joypad & JP_START) == 0;
-    const bool btn_a = (joypad & JP_A) == 0;
-    const bool btn_b = (joypad & JP_B) == 0;
 
-    const bool up_pressed = (joypad_pressed & JP_UP) == 0;
-    const bool left_pressed = (joypad_pressed & JP_LEFT) == 0;
-    const bool right_pressed = (joypad_pressed & JP_RIGHT) == 0;
-    const bool down_pressed = (joypad_pressed & JP_DOWN) == 0;
-    const bool select_pressed = (joypad_pressed & JP_SELECT) == 0;
     const bool start_pressed = (joypad_pressed & JP_START) == 0;
-    const bool btn_a_pressed = (joypad_pressed & JP_A) == 0;
-    const bool btn_b_pressed = (joypad_pressed & JP_B) == 0;
 
     if (paused) {
-        if (start_pressed)
+        if (start_pressed) {
+            audio_play_note(NOTE_A3, 6);
             paused = false;
+        }
 
         return;
     }
 
     if (start_pressed) {
-        if (!dead)
+        if (!dead) {
+            audio_play_note(NOTE_A3, 6);
             paused = true;
-        else
+        } else {
+
             game_init();
+        }
 
         return;
     }
