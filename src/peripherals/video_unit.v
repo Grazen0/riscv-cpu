@@ -68,7 +68,7 @@ module video_unit (
       .wenable_1(tattr_wenable),
       .rdata_1  (tattr_rdata),
 
-      .addr_2 (tile_idx),
+      .addr_2 (tile_idx_next),
       .rdata_2(tile_attrs)
   );
 
@@ -99,8 +99,8 @@ module video_unit (
   reg [TILE_IDX_WIDTH-1:0] tile_idx_base, tile_idx_base_next;
   reg [TILE_IDX_WIDTH-1:0] tile_idx, tile_idx_next;
 
-  wire [2:0] tile_x = x_pos[4:2];
-  wire [2:0] tile_y = y_pos[4:2];
+  wire [2:0] tile_x = x_pos_next[4:2];
+  wire [2:0] tile_y = y_pos_next[4:2];
 
   always @(*) begin
     y_pos_next         = y_pos;
@@ -200,10 +200,32 @@ module video_unit (
   wire [ 1:0] color_idx_yesflip = {tdata_show_data[8+tile_x], tdata_show_data[tile_x]};
 
   wire [ 1:0] color_idx = flip_y ? color_idx_yesflip : color_idx_noflip;
-  wire [11:0] cur_color = palette[pal_idx][color_idx];
+  wire [11:0] color_next = palette[pal_idx][color_idx];
+
+  reg  [ 3:0] vga_red_reg;
+  reg  [ 3:0] vga_blue_reg;
+  reg  [ 3:0] vga_green_reg;
+
+  wire [ 3:0] vga_red_next;
+  wire [ 3:0] vga_blue_next;
+  wire [ 3:0] vga_green_next;
+
+  assign {vga_red_next, vga_green_next, vga_blue_next} = color_next;
+
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      vga_red_reg   <= 0;
+      vga_green_reg <= 0;
+      vga_blue_reg  <= 0;
+    end else begin
+      vga_red_reg   <= vga_red_next;
+      vga_green_reg <= vga_green_next;
+      vga_blue_reg  <= vga_blue_next;
+    end
+  end
 
   wire        visible = h_visible & v_visible;
   wire [11:0] visible_mask = {12{visible & display_on}};
 
-  assign {vga_red, vga_green, vga_blue} = cur_color & visible_mask;
+  assign {vga_red, vga_green, vga_blue} = {vga_red_reg, vga_green_reg, vga_blue_reg} & visible_mask;
 endmodule
