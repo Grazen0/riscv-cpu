@@ -18,47 +18,79 @@ typedef struct {
     u8 y;
 } Position;
 
-static constexpr u16 snake_palette[] = {
+typedef enum : u8 {
+    PAL_SNAKE,
+    PAL_APPLE,
+    PAL_BG,
+} PaletteIdx;
+
+static constexpr u16 PALDATA_SNAKE[] = {
     0x000, // black
     0xFFF, // white
     0x00F, // blue
     0x11A, // darker blue
 };
 
-static constexpr u16 apple_palette[] = {
+static constexpr u16 PALDATA_APPLE[] = {
     0x000, // black
     0xFFF, // white
     0xF00, // red
     0x632, // brown-ish
 };
 
-static constexpr u16 bg_palette[] = {
+static constexpr u16 PALDATA_BG[] = {
     0x000, // black
     0x000, // black
     0x000, // black
     0x666, // gray
 };
 
-static constexpr u8 TATTR_BACKGROUND = 0b0010'0000;
-static constexpr u8 TATTR_WALL = 0b0010'0110;
-static constexpr u8 TATTR_APPLE = 0b0001'0001;
+typedef enum : u8 {
+    SPR_BACKGROUND,
+    SPR_APPLE,
+    SPR_SNAKE_HEAD_RIGHT,
+    SPR_SNAKE_HEAD_DOWN,
+    SPR_SNAKE_BODY_RIGHT,
+    SPR_SNAKE_BODY_DOWN,
+    SPR_WALL,
+    SPR_SNAKE_BODY_TURN,
+} SpriteIdx;
+
+// Calculates a tattr value based on:
+// - Sprite index (4 bits)
+// - Palette index (2 bits)
+// - Extra flags (TF_FLIP_X or TF_FLIP_Y, 1 bit each)
+#define MK_TATTR(spr_idx, pal_idx, flags) ((spr_idx) | ((pal_idx) << 4) | (flags))
+
+static constexpr u8 TF_FLIP_X = 0b1000'0000;
+static constexpr u8 TF_FLIP_Y = 0b0100'0000;
+
+static constexpr u8 TATTR_BACKGROUND = MK_TATTR(SPR_BACKGROUND, PAL_BG, 0);
+static constexpr u8 TATTR_WALL = MK_TATTR(SPR_WALL, PAL_BG, 0);
+static constexpr u8 TATTR_APPLE = MK_TATTR(SPR_APPLE, PAL_APPLE, 0);
 
 static constexpr u8 TATTR_SNAKE_HEAD[] = {
-    [DIR_UP] = 0b0100'0011,
-    [DIR_RIGHT] = 0b0000'0010,
-    [DIR_DOWN] = 0b0000'0011,
-    [DIR_LEFT] = 0b1000'0010,
+    [DIR_UP] = MK_TATTR(SPR_SNAKE_HEAD_DOWN, PAL_SNAKE, TF_FLIP_Y),
+    [DIR_RIGHT] = MK_TATTR(SPR_SNAKE_HEAD_RIGHT, PAL_SNAKE, 0),
+    [DIR_DOWN] = MK_TATTR(SPR_SNAKE_HEAD_DOWN, PAL_SNAKE, 0),
+    [DIR_LEFT] = MK_TATTR(SPR_SNAKE_HEAD_RIGHT, PAL_SNAKE, TF_FLIP_X),
 };
 
 static constexpr u8 TATTR_SNAKE_BODY[] = {
-    [DIR_UP] = 0b0100'0101,
-    [DIR_RIGHT] = 0b0000'0100,
-    [DIR_DOWN] = 0b0000'0101,
-    [DIR_LEFT] = 0b1000'0100,
+    [DIR_UP] = MK_TATTR(SPR_SNAKE_BODY_DOWN, PAL_SNAKE, 0),
+    [DIR_RIGHT] = MK_TATTR(SPR_SNAKE_BODY_RIGHT, PAL_SNAKE, 0),
+    [DIR_DOWN] = MK_TATTR(SPR_SNAKE_BODY_DOWN, PAL_SNAKE, 0),
+    [DIR_LEFT] = MK_TATTR(SPR_SNAKE_BODY_RIGHT, PAL_SNAKE, 0),
+};
+
+static constexpr u8 TATTR_SNAKE_BODY_TURN[] = {
+    [DIR_UP] = MK_TATTR(SPR_SNAKE_BODY_TURN, PAL_SNAKE, TF_FLIP_X | TF_FLIP_Y),
+    [DIR_RIGHT] = MK_TATTR(SPR_SNAKE_BODY_TURN, PAL_SNAKE, TF_FLIP_X),
+    [DIR_DOWN] = MK_TATTR(SPR_SNAKE_BODY_TURN, PAL_SNAKE, 0),
+    [DIR_LEFT] = MK_TATTR(SPR_SNAKE_BODY_TURN, PAL_SNAKE, TF_FLIP_Y),
 };
 
 static constexpr size_t SNAKE_CAPACITY = VIDEO_TILES_H * VIDEO_TILES_V;
-
 static Position snake[SNAKE_CAPACITY];
 static size_t snake_size;
 static Direction snake_dir;
@@ -153,8 +185,11 @@ static inline void game_step(void)
         draw_buf_push(prev_tail.x, prev_tail.y, TATTR_BACKGROUND);
     }
 
-    if (snake_size >= 2)
-        draw_buf_push(snake[1].x, snake[1].y, TATTR_SNAKE_BODY[prev_dir]);
+    if (snake_size == 2) {
+        draw_buf_push(snake[1].x, snake[1].y, TATTR_SNAKE_BODY[snake_dir]);
+    } else if (snake_size > 2) {
+        draw_buf_push(snake[1].x, snake[1].y, TATTR_SNAKE_BODY_TURN[snake_dir]);
+    }
 
     draw_buf_push(snake[0].x, snake[0].y, TATTR_SNAKE_HEAD[snake_dir]);
 }
@@ -171,6 +206,7 @@ static void wait_frame(void (*const wait_fn)())
 
 static bool enable_irq;
 static bool paused;
+static bool dead;
 
 __attribute__((interrupt)) void irq_handler(void)
 {
@@ -297,9 +333,9 @@ void main(void)
     video_init();
     rand_seed();
 
-    video_load_palette(0, snake_palette);
-    video_load_palette(1, apple_palette);
-    video_load_palette(2, bg_palette);
+    video_load_palette(PAL_SNAKE, PALDATA_SNAKE);
+    video_load_palette(PAL_APPLE, PALDATA_APPLE);
+    video_load_palette(PAL_BG, PALDATA_BG);
 
     extern const u8 TDATA_BACKGROUND[];
     extern const u8 TDATA_APPLE[];
@@ -308,14 +344,16 @@ void main(void)
     extern const u8 TDATA_SNAKE_BODY_RIGHT[];
     extern const u8 TDATA_SNAKE_BODY_DOWN[];
     extern const u8 TDATA_WALL[];
+    extern const u8 TDATA_SNAKE_BODY_TURN[];
 
-    video_load_tdata(0, (const u16 *)TDATA_BACKGROUND);
-    video_load_tdata(1, (const u16 *)TDATA_APPLE);
-    video_load_tdata(2, (const u16 *)TDATA_SNAKE_HEAD_RIGHT);
-    video_load_tdata(3, (const u16 *)TDATA_SNAKE_HEAD_DOWN);
-    video_load_tdata(4, (const u16 *)TDATA_SNAKE_BODY_RIGHT);
-    video_load_tdata(5, (const u16 *)TDATA_SNAKE_BODY_DOWN);
-    video_load_tdata(6, (const u16 *)TDATA_WALL);
+    video_load_tdata(SPR_BACKGROUND, (const u16 *)TDATA_BACKGROUND);
+    video_load_tdata(SPR_APPLE, (const u16 *)TDATA_APPLE);
+    video_load_tdata(SPR_SNAKE_HEAD_RIGHT, (const u16 *)TDATA_SNAKE_HEAD_RIGHT);
+    video_load_tdata(SPR_SNAKE_HEAD_DOWN, (const u16 *)TDATA_SNAKE_HEAD_DOWN);
+    video_load_tdata(SPR_SNAKE_BODY_RIGHT, (const u16 *)TDATA_SNAKE_BODY_RIGHT);
+    video_load_tdata(SPR_SNAKE_BODY_DOWN, (const u16 *)TDATA_SNAKE_BODY_DOWN);
+    video_load_tdata(SPR_WALL, (const u16 *)TDATA_WALL);
+    video_load_tdata(SPR_SNAKE_BODY_TURN, (const u16 *)TDATA_SNAKE_BODY_TURN);
 
     // Initialize game
     snake[0] = (Position){.y = 1, .x = 1};
