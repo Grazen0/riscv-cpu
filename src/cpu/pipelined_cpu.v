@@ -11,29 +11,34 @@
 `define FORWARD_MEMORY 2'd2
 
 module pl_hazard_unit (
-    input wire [4:0] rs1_e,
-    input wire [4:0] rs2_e,
-    input wire [4:0] rd_m,
-    input wire [4:0] rd_w,
-    input wire reg_write_m,
-    input wire reg_write_w,
-    output reg [1:0] forward_a_e,
-    output reg [1:0] forward_b_e,
+    input  wire [4:0] rs1_e,
+    input  wire [4:0] rs2_e,
+    input  wire [4:0] rd_m,
+    input  wire [4:0] rd_w,
+    input  wire       reg_write_m,
+    input  wire       reg_write_w,
+    output reg  [1:0] forward_a_e,
+    output reg  [1:0] forward_b_e,
 
-    input wire [11:0] csr_addr_e,
-    input wire [11:0] csr_addr_m,
-    input wire [11:0] csr_addr_w,
-    input wire csr_write_m,
-    input wire csr_write_w,
-    output reg [1:0] forward_csr_data_e,
+    input  wire       regf_write_m,
+    input  wire       regf_write_w,
+    output reg  [1:0] forward_af_e,
+    output reg  [1:0] forward_bf_e,
 
-    input wire [4:0] rs1_d,
-    input wire [4:0] rs2_d,
-    input wire [4:0] rd_e,
-    input wire [1:0] result_src_e,
-    output wire stall_f,
-    output wire stall_d,
-    output wire flush_e,
+    input  wire [11:0] csr_addr_e,
+    input  wire [11:0] csr_addr_m,
+    input  wire [11:0] csr_addr_w,
+    input  wire        csr_write_m,
+    input  wire        csr_write_w,
+    output reg  [ 1:0] forward_csr_data_e,
+
+    input  wire [4:0] rs1_d,
+    input  wire [4:0] rs2_d,
+    input  wire [4:0] rd_e,
+    input  wire [1:0] result_src_e,
+    output wire       stall_f,
+    output wire       stall_d,
+    output wire       flush_e,
 
     input wire [1:0] pc_src_e,
     output wire flush_d
@@ -41,8 +46,10 @@ module pl_hazard_unit (
   wire lw_stall = result_src_e == `RESULT_SRC_DATA && (rs1_d == rd_e || rs2_d == rd_e);
 
   always @(*) begin
-    forward_a_e = `FORWARD_NONE;
-    forward_b_e = `FORWARD_NONE;
+    forward_a_e        = `FORWARD_NONE;
+    forward_b_e        = `FORWARD_NONE;
+    forward_af_e       = `FORWARD_NONE;
+    forward_bf_e       = `FORWARD_NONE;
     forward_csr_data_e = `FORWARD_NONE;
 
     if (rs1_e == rd_m && reg_write_m && rs1_e != 0) begin
@@ -55,6 +62,18 @@ module pl_hazard_unit (
       forward_b_e = `FORWARD_MEMORY;
     end else if (rs2_e == rd_w && reg_write_w && rs2_e != 0) begin
       forward_b_e = `FORWARD_WRITEBACK;
+    end
+
+    if (rs1_e == rd_m && regf_write_m) begin
+      forward_af_e = `FORWARD_MEMORY;
+    end else if (rs1_e == rd_w && regf_write_w) begin
+      forward_af_e = `FORWARD_WRITEBACK;
+    end
+
+    if (rs2_e == rd_m && regf_write_m) begin
+      forward_bf_e = `FORWARD_MEMORY;
+    end else if (rs2_e == rd_w && regf_write_w) begin
+      forward_bf_e = `FORWARD_WRITEBACK;
     end
 
     if (csr_addr_e == csr_addr_m && csr_write_m) begin
@@ -173,7 +192,7 @@ module pipelined_cpu (
     input  wire [31:0] instr_data,
 
     output wire [31:0] data_addr,
-    output wire [31:0] data_wdata,
+    output reg  [31:0] data_wdata,
     output wire [ 3:0] data_wenable,
     input  wire [31:0] data_rdata,
 
@@ -181,6 +200,8 @@ module pipelined_cpu (
 );
   wire [1:0] forward_a_e;
   wire [1:0] forward_b_e;
+  wire [1:0] forward_af_e;
+  wire [1:0] forward_bf_e;
   wire [1:0] forward_csr_data_e;
   wire stall_f;
   wire stall_d;
@@ -196,6 +217,11 @@ module pipelined_cpu (
       .reg_write_w(reg_write_w),
       .forward_a_e(forward_a_e),
       .forward_b_e(forward_b_e),
+
+      .regf_write_m(regf_write_m),
+      .regf_write_w(regf_write_w),
+      .forward_af_e(forward_af_e),
+      .forward_bf_e(forward_bf_e),
 
       .csr_addr_e(csr_addr_e),
       .csr_addr_m(csr_addr_m),
@@ -319,7 +345,9 @@ module pipelined_cpu (
   wire [ 2:0] imm_src_d;
   wire        regw_src_d;
   wire        reg_write_d;
+  wire        regf_write_d;
   wire        csr_write_d;
+  wire        wd_sel_d;
 
   wire [ 4:0] rs1_d = instr_d[19:15];
   wire [ 4:0] rs2_d = instr_d[24:20];
@@ -327,6 +355,8 @@ module pipelined_cpu (
   wire [31:0] imm_ext_d;
   wire [31:0] rd1_d;
   wire [31:0] rd2_d;
+  wire [31:0] rdf1_d;
+  wire [31:0] rdf2_d;
   wire [31:0] csr_data_d;
   wire        trap_mret;
 
@@ -345,8 +375,10 @@ module pipelined_cpu (
       .imm_src         (imm_src_d),
       .regw_src        (regw_src_d),
       .reg_write       (reg_write_d),
+      .regf_write      (regf_write_d),
       .csr_write       (csr_write_d),
-      .trap_mret       (trap_mret)
+      .trap_mret       (trap_mret),
+      .wd_sel          (wd_sel_d)
   );
 
   cpu_register_file register_file (
@@ -361,6 +393,22 @@ module pipelined_cpu (
 
       .rd1(rd1_d),
       .rd2(rd2_d)
+  );
+
+  cpu_register_file #(
+      .HARDWIRE_ZERO(0)
+  ) float_register_file (
+      .clk  (~clk),
+      .rst_n(rst_n),
+
+      .a1 (rs1_d),
+      .a2 (rs2_d),
+      .a3 (rd_w),
+      .we3(regf_write_w),
+      .wd3(reg_wd3_w),
+
+      .rd1(rdf1_d),
+      .rd2(rdf2_d)
   );
 
   wire [11:0] csr_addr_d = instr_d[31:20];
@@ -386,6 +434,7 @@ module pipelined_cpu (
   // 3. Execute
   reg        regw_src_e;
   reg        reg_write_e;
+  reg        regf_write_e;
   reg        csr_write_e;
   reg [ 1:0] result_src_e;
   reg [ 3:0] mem_write_e;
@@ -394,9 +443,12 @@ module pipelined_cpu (
   reg        alu_src_a_e;
   reg [ 1:0] alu_src_b_e;
   reg [11:0] csr_addr_e;
+  reg        wd_sel_e;
 
   reg [31:0] rd1_e;
   reg [31:0] rd2_e;
+  reg [31:0] rdf1_e;
+  reg [31:0] rdf2_e;
   reg [31:0] csr_data_e;
   reg [31:0] pc_e;
   reg [ 4:0] rs1_e;
@@ -413,6 +465,7 @@ module pipelined_cpu (
     if (!rst_n) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
+      regf_write_e       <= 0;
       csr_write_e        <= 0;
       result_src_e       <= `RESULT_SRC_ALU;
       mem_write_e        <= 0;
@@ -421,9 +474,12 @@ module pipelined_cpu (
       alu_src_a_e        <= 0;
       alu_src_b_e        <= 0;
       csr_addr_e         <= 0;
+      wd_sel_e           <= `WD_SEL_INT;
 
       rd1_e              <= 32'b0;
       rd2_e              <= 32'b0;
+      rdf1_e             <= 32'b0;
+      rdf2_e             <= 32'b0;
       csr_data_e         <= 32'b0;
       pc_e               <= {32{1'bx}};
       rs1_e              <= 0;
@@ -438,6 +494,7 @@ module pipelined_cpu (
     end else if ((!trap_stages && flush_e) || flush_e_irq) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
+      regf_write_e       <= 0;
       csr_write_e        <= 0;
       result_src_e       <= `RESULT_SRC_ALU;
       mem_write_e        <= 0;
@@ -446,9 +503,12 @@ module pipelined_cpu (
       alu_src_a_e        <= 0;
       alu_src_b_e        <= 0;
       csr_addr_e         <= 0;
+      wd_sel_e           <= `WD_SEL_INT;
 
       rd1_e              <= 32'b0;
       rd2_e              <= 32'b0;
+      rdf1_e             <= 32'b0;
+      rdf2_e             <= 32'b0;
       csr_data_e         <= 32'b0;
       pc_e               <= {32{1'bx}};
       rs1_e              <= 0;
@@ -463,6 +523,7 @@ module pipelined_cpu (
     end else if (!stall_e_irq) begin
       regw_src_e         <= regw_src_d;
       reg_write_e        <= reg_write_d;
+      regf_write_e       <= regf_write_d;
       csr_write_e        <= csr_write_d;
       result_src_e       <= result_src_d;
       mem_write_e        <= mem_write_d;
@@ -471,9 +532,12 @@ module pipelined_cpu (
       alu_src_a_e        <= alu_src_a_d;
       alu_src_b_e        <= alu_src_b_d;
       csr_addr_e         <= csr_addr_d;
+      wd_sel_e           <= wd_sel_d;
 
       rd1_e              <= rd1_d;
       rd2_e              <= rd2_d;
+      rdf1_e             <= rdf1_d;
+      rdf2_e             <= rdf2_d;
       csr_data_e         <= csr_data_d;
       pc_e               <= pc_d;
       rs1_e              <= rs1_d;
@@ -496,9 +560,9 @@ module pipelined_cpu (
 
   reg  [31:0] rd1_e_fw;
   reg  [31:0] rd2_e_fw;
+  reg  [31:0] rdf1_e_fw;
+  reg  [31:0] rdf2_e_fw;
   reg  [31:0] csr_data_e_fw;
-
-  wire [31:0] write_data_e = rd2_e_fw;
 
   always @(*) begin
     case (forward_a_e)
@@ -525,6 +589,20 @@ module pipelined_cpu (
       end
       `FORWARD_WRITEBACK: rd2_e_fw = result_w;
       default:            rd2_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_af_e)
+      `FORWARD_NONE:      rdf1_e_fw = rdf1_e;
+      `FORWARD_MEMORY:    rdf1_e_fw = result_pre_m;
+      `FORWARD_WRITEBACK: rdf1_e_fw = result_w;
+      default:            rdf1_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_bf_e)
+      `FORWARD_NONE:      rdf2_e_fw = rdf2_e;
+      `FORWARD_MEMORY:    rdf2_e_fw = result_pre_m;
+      `FORWARD_WRITEBACK: rdf2_e_fw = result_w;
+      default:            rdf2_e_fw = {32{1'bx}};
     endcase
 
     case (forward_csr_data_e)
@@ -581,15 +659,18 @@ module pipelined_cpu (
   // 4. Memory
   reg        regw_src_m;
   reg        reg_write_m;
+  reg        regf_write_m;
   reg        csr_write_m;
   reg [ 1:0] result_src_m;
   reg [ 3:0] mem_write_m;
   reg [ 2:0] data_ext_control_m;
   reg [11:0] csr_addr_m;
+  reg        wd_sel_m;
+  reg [31:0] rd2_m;
+  reg [31:0] rdf2_m;
 
   reg [31:0] csr_data_m;
   reg [31:0] alu_result_m;
-  reg [31:0] write_data_m;
   reg [ 4:0] rd_m;
   reg [31:0] pc_target_m;
   reg [31:0] pc_plus_4_m;
@@ -598,15 +679,18 @@ module pipelined_cpu (
     if (!rst_n) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
+      regf_write_m       <= 0;
       csr_write_m        <= 0;
       result_src_m       <= `RESULT_SRC_ALU;
       mem_write_m        <= 4'b0000;
       data_ext_control_m <= 4'b0000;
       csr_addr_m         <= 0;
+      wd_sel_m           <= `WD_SEL_INT;
+      rd2_m              <= 0;
+      rdf2_m             <= 0;
 
       csr_data_m         <= 32'b0;
       alu_result_m       <= 32'b0;
-      write_data_m       <= 32'b0;
       rd_m               <= 5'b0;
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
@@ -614,30 +698,36 @@ module pipelined_cpu (
       if (flush_m_irq) begin
         regw_src_m         <= 0;
         reg_write_m        <= 0;
+        regf_write_m       <= 0;
         csr_write_m        <= 0;
         result_src_m       <= `RESULT_SRC_ALU;
         mem_write_m        <= 4'b0000;
         data_ext_control_m <= 4'b0000;
         csr_addr_m         <= 0;
+        wd_sel_m           <= `WD_SEL_INT;
+        rd2_m              <= 0;
+        rdf2_m             <= 0;
 
         csr_data_m         <= 32'b0;
         alu_result_m       <= 32'b0;
-        write_data_m       <= 32'b0;
         rd_m               <= 5'b0;
         pc_target_m        <= {32{1'bx}};
         pc_plus_4_m        <= {32{1'bx}};
       end else begin
         regw_src_m         <= regw_src_e;
         reg_write_m        <= reg_write_e;
+        regf_write_m       <= regf_write_e;
         csr_write_m        <= csr_write_e;
         result_src_m       <= result_src_e;
         mem_write_m        <= mem_write_e;
         data_ext_control_m <= data_ext_control_e;
         csr_addr_m         <= csr_addr_e;
+        wd_sel_m           <= wd_sel_e;
+        rd2_m              <= rd2_e_fw;
+        rdf2_m             <= rdf2_e_fw;
 
         csr_data_m         <= csr_data_e;
         alu_result_m       <= alu_result_e;
-        write_data_m       <= write_data_e;
         rd_m               <= rd_e;
         pc_target_m        <= pc_target_e;
         pc_plus_4_m        <= pc_plus_4_e;
@@ -648,8 +738,16 @@ module pipelined_cpu (
   wire [31:0] read_data_m;
 
   assign data_addr    = alu_result_m;
-  assign data_wdata   = write_data_m;
   assign data_wenable = mem_write_m;
+
+  always @(*) begin
+    case (wd_sel_m)
+      `WD_SEL_INT:   data_wdata = rd2_m;
+      `WD_SEL_FLOAT: data_wdata = rdf2_m;
+      default:       data_wdata = {32{1'bx}};
+    endcase
+  end
+
 
   cpu_data_extend data_extend (
       .data    (data_rdata),
@@ -670,6 +768,7 @@ module pipelined_cpu (
 
   // 5. Writeback
   reg        reg_write_w;
+  reg        regf_write_w;
   reg        csr_write_w;
   reg        regw_src_w;
 
@@ -684,6 +783,7 @@ module pipelined_cpu (
     if (!rst_n) begin
       result_pre_w <= 0;
       reg_write_w  <= 0;
+      regf_write_w <= 0;
       csr_write_w  <= 0;
       regw_src_w   <= 0;
 
@@ -695,6 +795,7 @@ module pipelined_cpu (
     end else begin
       result_pre_w <= result_pre_m;
       reg_write_w  <= reg_write_m;
+      regf_write_w <= regf_write_m;
       csr_write_w  <= csr_write_m;
       regw_src_w   <= regw_src_m;
 

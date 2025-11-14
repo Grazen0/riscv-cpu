@@ -18,7 +18,7 @@ LINKER := ./data/tachyon.ld
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CFLAGS := $(INC_FLAGS) -march=rv32i_zicsr -mabi=ilp32 -std=c23 -Oz -g \
+CFLAGS := $(INC_FLAGS) -march=rv32if_zicsr -mabi=ilp32 -std=c23 -Oz -g \
 		  -ffunction-sections -fdata-sections -ffreestanding \
 		  -specs=nano.specs -nostartfiles -static
 LDFLAGS := --no-warn-rwx-segments,--gc-sections

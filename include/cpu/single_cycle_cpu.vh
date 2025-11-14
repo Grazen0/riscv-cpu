@@ -28,4 +28,7 @@
 `define BRANCH_BREAK 3'd3
 `define BRANCH_COND 3'd4
 
+`define WD_SEL_INT 1'd0
+`define WD_SEL_FLOAT 1'd1
+
 `endif

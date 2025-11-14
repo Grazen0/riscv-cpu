@@ -19,8 +19,10 @@ module scc_control (
     output reg [2:0] imm_src,
     output reg regw_src,
     output reg reg_write,
+    output reg regf_write,
     output reg csr_write,
-    output reg trap_mret
+    output reg trap_mret,
+    output reg wd_sel
 );
   always @(*) begin
     branch_type = `BRANCH_NONE;
@@ -31,9 +33,11 @@ module scc_control (
     alu_src_b = `ALU_SRC_B_RD2;
     imm_src = `IMM_SRC_I;
     reg_write = 0;
+    regf_write = 0;
     regw_src = `REGW_SRC_RESULT;
     csr_write = 0;
     trap_mret = 0;
+    wd_sel = 1'bx;
 
     data_ext_control = funct3;
 
@@ -62,6 +66,7 @@ module scc_control (
         alu_src_b = `ALU_SRC_B_IMM;
         alu_control = `ALU_ADD;
         result_src = `RESULT_SRC_ALU;
+        wd_sel = `WD_SEL_INT;
 
         case (funct3)
           3'b000:  mem_write = 4'b0001;
@@ -130,8 +135,26 @@ module scc_control (
           csr_write  = 1;
         end
       end
+      7'b1010011: begin  // float alu
+        // TODO: implement
+      end
+      7'b0000111: begin  // flw
+        imm_src = `IMM_SRC_I;
+        alu_src_b = `ALU_SRC_B_IMM;
+        alu_control = `ALU_ADD;
+        result_src = `RESULT_SRC_DATA;
+        regf_write = 1;
+      end
+      7'b0100111: begin  // fsw
+        imm_src = `IMM_SRC_S;
+        alu_src_b = `ALU_SRC_B_IMM;
+        alu_control = `ALU_ADD;
+        result_src = `RESULT_SRC_ALU;
+
+        wd_sel = `WD_SEL_FLOAT;
+        mem_write = 4'b1111;
+      end
       default: begin
-        // $display("Unknown op: %h", op);
         branch_type = `BRANCH_BREAK;
       end
     endcase
