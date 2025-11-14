@@ -10,7 +10,7 @@ module scc_control (
     input wire [6:0] funct7,
 
     output reg [2:0] branch_type,
-    output reg [1:0] result_src,
+    output reg [2:0] result_src,
     output reg [2:0] data_ext_control,
     output reg [3:0] mem_write,
     output reg [3:0] alu_control,
@@ -22,7 +22,8 @@ module scc_control (
     output reg regf_write,
     output reg csr_write,
     output reg trap_mret,
-    output reg wd_sel
+    output reg wd_sel,
+    output reg fp_alu_enable
 );
   always @(*) begin
     branch_type = `BRANCH_NONE;
@@ -38,6 +39,7 @@ module scc_control (
     csr_write = 0;
     trap_mret = 0;
     wd_sel = 1'bx;
+    fp_alu_enable = 0;
 
     data_ext_control = funct3;
 
@@ -135,24 +137,34 @@ module scc_control (
           csr_write  = 1;
         end
       end
-      7'b1010011: begin  // float alu
-        // TODO: implement
+      7'b1010011: begin  // fp alu add/sub/mul/div
+        fp_alu_enable = 1;
+        result_src    = `RESULT_SRC_FP_ALU;
+        regf_write    = 1;
+
+        casez (funct7)
+          7'b00000zz: alu_control = {1'bx, `OP_ADD};
+          7'b00001zz: alu_control = {1'bx, `OP_SUB};
+          7'b00010zz: alu_control = {1'bx, `OP_MUL};
+          7'b00011zz: alu_control = {1'bx, `OP_DIV};
+          default:    alu_control = 4'bxxxx;
+        endcase
       end
       7'b0000111: begin  // flw
-        imm_src = `IMM_SRC_I;
-        alu_src_b = `ALU_SRC_B_IMM;
+        imm_src     = `IMM_SRC_I;
+        alu_src_b   = `ALU_SRC_B_IMM;
         alu_control = `ALU_ADD;
-        result_src = `RESULT_SRC_DATA;
-        regf_write = 1;
+        result_src  = `RESULT_SRC_DATA;
+        regf_write  = 1;
       end
       7'b0100111: begin  // fsw
-        imm_src = `IMM_SRC_S;
-        alu_src_b = `ALU_SRC_B_IMM;
+        imm_src     = `IMM_SRC_S;
+        alu_src_b   = `ALU_SRC_B_IMM;
         alu_control = `ALU_ADD;
-        result_src = `RESULT_SRC_ALU;
+        result_src  = `RESULT_SRC_ALU;
 
-        wd_sel = `WD_SEL_FLOAT;
-        mem_write = 4'b1111;
+        wd_sel      = `WD_SEL_FLOAT;
+        mem_write   = 4'b1111;
       end
       default: begin
         branch_type = `BRANCH_BREAK;
@@ -210,7 +222,7 @@ module single_cycle_cpu (
 
   wire [ 1:0] pc_src;
   wire [ 2:0] branch_type;
-  wire [ 1:0] result_src;
+  wire [ 2:0] result_src;
   wire        mem_write;
   wire [ 3:0] alu_control;
   wire        alu_src_a;

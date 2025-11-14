@@ -34,7 +34,7 @@ module mcc_control (
     output reg adr_src,
     output reg [3:0] mem_write,
     output reg ir_write,
-    output reg [1:0] result_src,
+    output reg [2:0] result_src,
     output reg [3:0] alu_control,
     output reg [1:0] alu_src_a,
     output reg [1:0] alu_src_b,
@@ -293,7 +293,7 @@ module multi_cycle_cpu (
   wire [1:0] branch_type;
   wire adr_src;
   wire ir_write;
-  wire [1:0] result_src;
+  wire [2:0] result_src;
   wire [3:0] alu_control;
   wire [1:0] alu_src_a;
   wire [1:0] alu_src_b;

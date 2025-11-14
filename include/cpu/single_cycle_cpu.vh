@@ -14,10 +14,11 @@
 `define PC_SRC_ALU 2'd2
 `define PC_SRC_CURRENT 2'd3
 
-`define RESULT_SRC_ALU 2'd0
-`define RESULT_SRC_DATA 2'd1
-`define RESULT_SRC_PC_TARGET 2'd2
-`define RESULT_SRC_PC_STEP 2'd3
+`define RESULT_SRC_ALU 3'd0
+`define RESULT_SRC_DATA 3'd1
+`define RESULT_SRC_PC_TARGET 3'd2
+`define RESULT_SRC_PC_STEP 3'd3
+`define RESULT_SRC_FP_ALU 3'd4
 
 `define REGW_SRC_RESULT 1'd0
 `define REGW_SRC_CSR 1'd1
@@ -30,5 +31,7 @@
 
 `define WD_SEL_INT 1'd0
 `define WD_SEL_FLOAT 1'd1
+
+`define FP_ALU_ADD 4'b0000
 
 `endif

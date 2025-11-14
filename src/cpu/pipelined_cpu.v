@@ -1,10 +1,10 @@
 `default_nettype none
 
-
 `include "single_cycle_cpu.vh"
 `include "cpu_csr_file.vh"
 `include "cpu_imm_extend.vh"
 `include "cpu_alu.vh"
+`include "float_alu.vh"
 
 `define FORWARD_NONE 2'd0
 `define FORWARD_WRITEBACK 2'd1
@@ -35,15 +35,21 @@ module pl_hazard_unit (
     input  wire [4:0] rs1_d,
     input  wire [4:0] rs2_d,
     input  wire [4:0] rd_e,
-    input  wire [1:0] result_src_e,
+    input  wire [2:0] result_src_e,
     output wire       stall_f,
     output wire       stall_d,
+    output wire       stall_e,
     output wire       flush_e,
+    output wire       flush_m,
+
+    input wire fp_alu_enable_e,
+    input wire fp_alu_valid_out_e,
 
     input wire [1:0] pc_src_e,
     output wire flush_d
 );
   wire lw_stall = result_src_e == `RESULT_SRC_DATA && (rs1_d == rd_e || rs2_d == rd_e);
+  wire fp_alu_stall = fp_alu_enable_e && !fp_alu_valid_out_e;
 
   always @(*) begin
     forward_a_e        = `FORWARD_NONE;
@@ -83,10 +89,12 @@ module pl_hazard_unit (
     end
   end
 
-  assign stall_f = lw_stall;
-  assign stall_d = lw_stall;
+  assign stall_f = lw_stall || fp_alu_stall;
+  assign stall_d = lw_stall || fp_alu_stall;
+  assign stall_e = fp_alu_stall;
   assign flush_d = pc_src_e != `PC_SRC_STEP;
   assign flush_e = lw_stall || pc_src_e != `PC_SRC_STEP;
+  assign flush_m = fp_alu_stall;
 endmodule
 
 module pl_interrupt_control (
@@ -205,7 +213,9 @@ module pipelined_cpu (
   wire [1:0] forward_csr_data_e;
   wire stall_f;
   wire stall_d;
+  wire stall_e;
   wire flush_e;
+  wire flush_m;
   wire flush_d;
 
   pl_hazard_unit hazard_unit (
@@ -230,13 +240,18 @@ module pipelined_cpu (
       .csr_write_w(csr_write_w),
       .forward_csr_data_e(forward_csr_data_e),
 
+      .fp_alu_enable_e(fp_alu_enable_e),
+      .fp_alu_valid_out_e(fp_alu_valid_out_e),
+
       .rs1_d(rs1_d),
       .rs2_d(rs2_d),
       .rd_e(rd_e),
       .result_src_e(result_src_e),
       .stall_f(stall_f),
       .stall_d(stall_d),
+      .stall_e(stall_e),
       .flush_e(flush_e),
+      .flush_m(flush_m),
 
       .pc_src_e(pc_src_e),
       .flush_d (flush_d)
@@ -336,7 +351,7 @@ module pipelined_cpu (
   wire [ 2:0] funct3_d = instr_d[14:12];
 
   wire [ 2:0] branch_type_d;
-  wire [ 1:0] result_src_d;
+  wire [ 2:0] result_src_d;
   wire [ 3:0] mem_write_d;
   wire [ 2:0] data_ext_control_d;
   wire [ 3:0] alu_control_d;
@@ -359,6 +374,7 @@ module pipelined_cpu (
   wire [31:0] rdf2_d;
   wire [31:0] csr_data_d;
   wire        trap_mret;
+  wire        fp_alu_enable_d;
 
   scc_control control (
       .op    (instr_d[6:0]),
@@ -378,7 +394,8 @@ module pipelined_cpu (
       .regf_write      (regf_write_d),
       .csr_write       (csr_write_d),
       .trap_mret       (trap_mret),
-      .wd_sel          (wd_sel_d)
+      .wd_sel          (wd_sel_d),
+      .fp_alu_enable   (fp_alu_enable_d)
   );
 
   cpu_register_file register_file (
@@ -436,7 +453,7 @@ module pipelined_cpu (
   reg        reg_write_e;
   reg        regf_write_e;
   reg        csr_write_e;
-  reg [ 1:0] result_src_e;
+  reg [ 2:0] result_src_e;
   reg [ 3:0] mem_write_e;
   reg [ 2:0] data_ext_control_e;
   reg [ 3:0] alu_control_e;
@@ -444,6 +461,7 @@ module pipelined_cpu (
   reg [ 1:0] alu_src_b_e;
   reg [11:0] csr_addr_e;
   reg        wd_sel_e;
+  reg        fp_alu_enable_e;
 
   reg [31:0] rd1_e;
   reg [31:0] rd2_e;
@@ -475,6 +493,7 @@ module pipelined_cpu (
       alu_src_b_e        <= 0;
       csr_addr_e         <= 0;
       wd_sel_e           <= `WD_SEL_INT;
+      fp_alu_enable_e    <= 0;
 
       rd1_e              <= 32'b0;
       rd2_e              <= 32'b0;
@@ -504,6 +523,7 @@ module pipelined_cpu (
       alu_src_b_e        <= 0;
       csr_addr_e         <= 0;
       wd_sel_e           <= `WD_SEL_INT;
+      fp_alu_enable_e    <= 0;
 
       rd1_e              <= 32'b0;
       rd2_e              <= 32'b0;
@@ -520,7 +540,7 @@ module pipelined_cpu (
       funct3_e           <= 3'bxxx;
 
       bubble_e           <= 1;
-    end else if (!stall_e_irq) begin
+    end else if ((trap_stages || !stall_e) && !stall_e_irq) begin
       regw_src_e         <= regw_src_d;
       reg_write_e        <= reg_write_d;
       regf_write_e       <= regf_write_d;
@@ -533,6 +553,7 @@ module pipelined_cpu (
       alu_src_b_e        <= alu_src_b_d;
       csr_addr_e         <= csr_addr_d;
       wd_sel_e           <= wd_sel_d;
+      fp_alu_enable_e    <= fp_alu_enable_d;
 
       rd1_e              <= rd1_d;
       rd2_e              <= rd2_d;
@@ -643,6 +664,28 @@ module pipelined_cpu (
       .lt    (alu_lt_e)
   );
 
+  wire fp_alu_valid_out_e;
+  wire fp_alu_ready_out_e;
+  wire [31:0] fp_alu_result_e;
+
+  float_alu fp_alu (
+      .clk  (clk),
+      .rst_n(rst_n),
+
+      .op_a      (rdf1_e_fw),
+      .op_b      (rdf2_e_fw),
+      .op_code   (alu_control_e[2:0]),
+      .mode_fp   (`FP_SINGLE),
+      .round_mode(funct3_e[0]),
+
+      .start   (fp_alu_enable_e && !fp_alu_valid_out_e),
+      .ready_in(1'b1),
+
+      .valid_out(fp_alu_valid_out_e),
+      .ready_out(fp_alu_ready_out_e),
+      .result   (fp_alu_result_e)
+  );
+
   wire [1:0] pc_src_e;
 
   scc_branch_logic branch_logic (
@@ -661,7 +704,7 @@ module pipelined_cpu (
   reg        reg_write_m;
   reg        regf_write_m;
   reg        csr_write_m;
-  reg [ 1:0] result_src_m;
+  reg [ 2:0] result_src_m;
   reg [ 3:0] mem_write_m;
   reg [ 2:0] data_ext_control_m;
   reg [11:0] csr_addr_m;
@@ -671,6 +714,7 @@ module pipelined_cpu (
 
   reg [31:0] csr_data_m;
   reg [31:0] alu_result_m;
+  reg [31:0] fp_alu_result_m;
   reg [ 4:0] rd_m;
   reg [31:0] pc_target_m;
   reg [31:0] pc_plus_4_m;
@@ -691,11 +735,12 @@ module pipelined_cpu (
 
       csr_data_m         <= 32'b0;
       alu_result_m       <= 32'b0;
+      fp_alu_result_m    <= 32'b0;
       rd_m               <= 5'b0;
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
     end else begin
-      if (flush_m_irq) begin
+      if ((!trap_stages && flush_m) || flush_m_irq) begin
         regw_src_m         <= 0;
         reg_write_m        <= 0;
         regf_write_m       <= 0;
@@ -710,6 +755,7 @@ module pipelined_cpu (
 
         csr_data_m         <= 32'b0;
         alu_result_m       <= 32'b0;
+        fp_alu_result_m    <= 32'b0;
         rd_m               <= 5'b0;
         pc_target_m        <= {32{1'bx}};
         pc_plus_4_m        <= {32{1'bx}};
@@ -728,6 +774,7 @@ module pipelined_cpu (
 
         csr_data_m         <= csr_data_e;
         alu_result_m       <= alu_result_e;
+        fp_alu_result_m    <= fp_alu_result_e;
         rd_m               <= rd_e;
         pc_target_m        <= pc_target_e;
         pc_plus_4_m        <= pc_plus_4_e;
@@ -762,6 +809,7 @@ module pipelined_cpu (
       `RESULT_SRC_ALU:       result_pre_m = alu_result_m;
       `RESULT_SRC_PC_TARGET: result_pre_m = pc_target_m;
       `RESULT_SRC_PC_STEP:   result_pre_m = pc_plus_4_m;
+      `RESULT_SRC_FP_ALU:    result_pre_m = fp_alu_result_m;
       default:               result_pre_m = {32{1'bx}};
     endcase
   end
@@ -773,7 +821,7 @@ module pipelined_cpu (
   reg        regw_src_w;
 
   reg [31:0] result_pre_w;
-  reg [ 1:0] result_src_w;
+  reg [ 2:0] result_src_w;
   reg [31:0] read_data_w;
   reg [31:0] csr_data_w;
   reg [ 4:0] rd_w;
