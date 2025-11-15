@@ -11,10 +11,11 @@
 `define FORWARD_MEMORY 2'd2
 
 module pl_hazard_unit (
-    input  wire [4:0] rs1_e,
-    input  wire [4:0] rs2_e,
-    input  wire [4:0] rd_m,
-    input  wire [4:0] rd_w,
+    input wire [4:0] rs1_e,
+    input wire [4:0] rs2_e,
+    input wire [4:0] rd_m,
+    input wire [4:0] rd_w,
+
     input  wire       reg_write_m,
     input  wire       reg_write_w,
     output reg  [1:0] forward_a_e,
@@ -32,21 +33,22 @@ module pl_hazard_unit (
     input  wire        csr_write_w,
     output reg  [ 1:0] forward_csr_data_e,
 
-    input  wire [4:0] rs1_d,
-    input  wire [4:0] rs2_d,
-    input  wire [4:0] rd_e,
-    input  wire [2:0] result_src_e,
-    output wire       stall_f,
-    output wire       stall_d,
-    output wire       stall_e,
-    output wire       flush_e,
-    output wire       flush_m,
+    input wire [4:0] rs1_d,
+    input wire [4:0] rs2_d,
+    input wire [4:0] rd_e,
+    input wire [2:0] result_src_e,
 
     input wire fp_alu_enable_e,
     input wire fp_alu_valid_out_e,
 
     input wire [1:0] pc_src_e,
-    output wire flush_d
+
+    output wire stall_f,
+    output wire stall_d,
+    output wire flush_d,
+    output wire stall_e,
+    output wire flush_e,
+    output wire flush_m
 );
   wire lw_stall = result_src_e == `RESULT_SRC_DATA && (rs1_d == rd_e || rs2_d == rd_e);
   wire fp_alu_stall = fp_alu_enable_e && !fp_alu_valid_out_e;
@@ -296,8 +298,9 @@ module pipelined_cpu (
   pl_hazard_unit hazard_unit (
       .rs1_e(rs1_e),
       .rs2_e(rs2_e),
-      .rd_m(rd_m),
-      .rd_w(rd_w),
+      .rd_m (rd_m),
+      .rd_w (rd_w),
+
       .reg_write_m(reg_write_m),
       .reg_write_w(reg_write_w),
       .forward_a_e(forward_a_e),
@@ -308,28 +311,29 @@ module pipelined_cpu (
       .forward_af_e(forward_af_e),
       .forward_bf_e(forward_bf_e),
 
-      .csr_addr_e(csr_addr_e),
-      .csr_addr_m(csr_addr_m),
-      .csr_addr_w(csr_addr_w),
-      .csr_write_m(csr_write_m),
-      .csr_write_w(csr_write_w),
+      .csr_addr_e        (csr_addr_e),
+      .csr_addr_m        (csr_addr_m),
+      .csr_addr_w        (csr_addr_w),
+      .csr_write_m       (csr_write_m),
+      .csr_write_w       (csr_write_w),
       .forward_csr_data_e(forward_csr_data_e),
 
-      .fp_alu_enable_e(fp_alu_enable_e),
+      .rs1_d       (rs1_d),
+      .rs2_d       (rs2_d),
+      .rd_e        (rd_e),
+      .result_src_e(result_src_e),
+
+      .fp_alu_enable_e   (fp_alu_enable_e),
       .fp_alu_valid_out_e(fp_alu_valid_out_e),
 
-      .rs1_d(rs1_d),
-      .rs2_d(rs2_d),
-      .rd_e(rd_e),
-      .result_src_e(result_src_e),
+      .pc_src_e(pc_src_e),
+
       .stall_f(stall_f),
       .stall_d(stall_d),
+      .flush_d(flush_d),
       .stall_e(stall_e),
       .flush_e(flush_e),
-      .flush_m(flush_m),
-
-      .pc_src_e(pc_src_e),
-      .flush_d (flush_d)
+      .flush_m(flush_m)
   );
 
   wire flush_m_irq;
