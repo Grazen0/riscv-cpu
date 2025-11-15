@@ -192,6 +192,81 @@ module pl_interrupt_control (
   end
 endmodule
 
+module pl_forwarding_unit (
+    input wire [31:0] rd1_e,
+    input wire [31:0] rd2_e,
+    input wire [31:0] rdf1_e,
+    input wire [31:0] rdf2_e,
+    input wire [31:0] csr_data_e,
+
+    input wire [31:0] result_pre_m,
+    input wire [31:0] csr_data_m,
+    input wire [31:0] result_w,
+
+    input wire [1:0] forward_a_e,
+    input wire [1:0] forward_b_e,
+    input wire [1:0] forward_af_e,
+    input wire [1:0] forward_bf_e,
+    input wire [1:0] forward_csr_data_e,
+
+    input wire regw_src_m,
+
+    output reg [31:0] rd1_e_fw,
+    output reg [31:0] rd2_e_fw,
+    output reg [31:0] rdf1_e_fw,
+    output reg [31:0] rdf2_e_fw,
+    output reg [31:0] csr_data_e_fw
+);
+  always @(*) begin
+    case (forward_a_e)
+      `FORWARD_NONE:      rd1_e_fw = rd1_e;
+      `FORWARD_MEMORY: begin
+        case (regw_src_m)
+          `REGW_SRC_RESULT: rd1_e_fw = result_pre_m;
+          `REGW_SRC_CSR:    rd1_e_fw = csr_data_m;
+          default:          rd1_e_fw = {32{1'bx}};
+        endcase
+      end
+      `FORWARD_WRITEBACK: rd1_e_fw = result_w;
+      default:            rd1_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_b_e)
+      `FORWARD_NONE:      rd2_e_fw = rd2_e;
+      `FORWARD_MEMORY: begin
+        case (regw_src_m)
+          `REGW_SRC_RESULT: rd2_e_fw = result_pre_m;
+          `REGW_SRC_CSR:    rd2_e_fw = csr_data_m;
+          default:          rd2_e_fw = {32{1'bx}};
+        endcase
+      end
+      `FORWARD_WRITEBACK: rd2_e_fw = result_w;
+      default:            rd2_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_af_e)
+      `FORWARD_NONE:      rdf1_e_fw = rdf1_e;
+      `FORWARD_MEMORY:    rdf1_e_fw = result_pre_m;
+      `FORWARD_WRITEBACK: rdf1_e_fw = result_w;
+      default:            rdf1_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_bf_e)
+      `FORWARD_NONE:      rdf2_e_fw = rdf2_e;
+      `FORWARD_MEMORY:    rdf2_e_fw = result_pre_m;
+      `FORWARD_WRITEBACK: rdf2_e_fw = result_w;
+      default:            rdf2_e_fw = {32{1'bx}};
+    endcase
+
+    case (forward_csr_data_e)
+      `FORWARD_NONE:      csr_data_e_fw = csr_data_e;
+      `FORWARD_MEMORY:    csr_data_e_fw = result_pre_m;
+      `FORWARD_WRITEBACK: csr_data_e_fw = result_w;
+      default:            csr_data_e_fw = {32{1'bx}};
+    endcase
+  end
+endmodule
+
 module pipelined_cpu (
     input wire clk,
     input wire rst_n,
@@ -302,7 +377,7 @@ module pipelined_cpu (
   reg [31:0] pc_next;
 
   always @(*) begin
-    if (trap_pc || trap_mret) begin
+    if (trap_pc || trap_mret_d) begin
       pc_next = csr_data_d;
     end else begin
       case (pc_src_e)
@@ -332,7 +407,7 @@ module pipelined_cpu (
       pc_plus_4_d <= {32{1'bx}};
       bubble_d    <= 1;
     end else begin
-      if (trap_mret || (!trap_stages && flush_d) || flush_d_irq) begin
+      if (trap_mret_d || (!trap_stages && flush_d) || flush_d_irq) begin
         instr_d     <= 32'h00000013;  // nop
         pc_d        <= {32{1'bx}};
         pc_plus_4_d <= {32{1'bx}};
@@ -373,7 +448,7 @@ module pipelined_cpu (
   wire [31:0] rdf1_d;
   wire [31:0] rdf2_d;
   wire [31:0] csr_data_d;
-  wire        trap_mret;
+  wire        trap_mret_d;
   wire        fp_alu_enable_d;
 
   scc_control control (
@@ -393,7 +468,7 @@ module pipelined_cpu (
       .reg_write       (reg_write_d),
       .regf_write      (regf_write_d),
       .csr_write       (csr_write_d),
-      .trap_mret       (trap_mret),
+      .trap_mret       (trap_mret_d),
       .wd_sel          (wd_sel_d),
       .fp_alu_enable   (fp_alu_enable_d)
   );
@@ -434,7 +509,7 @@ module pipelined_cpu (
       .clk  (~clk),
       .rst_n(rst_n),
 
-      .raddr(trap_pc ? `CSR_MTVEC : trap_mret ? `CSR_MEPC : csr_addr_d),
+      .raddr(trap_pc ? `CSR_MTVEC : trap_mret_d ? `CSR_MEPC : csr_addr_d),
       .rdata(csr_data_d),
 
       .waddr  (trap_pc ? `CSR_MEPC : csr_addr_w),
@@ -592,60 +667,37 @@ module pipelined_cpu (
   wire        alu_borrow_e;
   wire        alu_lt_e;
 
-  reg  [31:0] rd1_e_fw;
-  reg  [31:0] rd2_e_fw;
-  reg  [31:0] rdf1_e_fw;
-  reg  [31:0] rdf2_e_fw;
-  reg  [31:0] csr_data_e_fw;
+  wire [31:0] rd1_e_fw;
+  wire [31:0] rd2_e_fw;
+  wire [31:0] rdf1_e_fw;
+  wire [31:0] rdf2_e_fw;
+  wire [31:0] csr_data_e_fw;
 
-  always @(*) begin
-    case (forward_a_e)
-      `FORWARD_NONE:      rd1_e_fw = rd1_e;
-      `FORWARD_MEMORY: begin
-        case (regw_src_m)
-          `REGW_SRC_RESULT: rd1_e_fw = result_pre_m;
-          `REGW_SRC_CSR:    rd1_e_fw = csr_data_m;
-          default:          rd1_e_fw = {32{1'bx}};
-        endcase
-      end
-      `FORWARD_WRITEBACK: rd1_e_fw = result_w;
-      default:            rd1_e_fw = {32{1'bx}};
-    endcase
+  pl_forwarding_unit forwarding_unit (
+      .rd1_e(rd1_e),
+      .rd2_e(rd2_e),
+      .rdf1_e(rdf1_e),
+      .rdf2_e(rdf2_e),
+      .csr_data_e(csr_data_e),
 
-    case (forward_b_e)
-      `FORWARD_NONE:      rd2_e_fw = rd2_e;
-      `FORWARD_MEMORY: begin
-        case (regw_src_m)
-          `REGW_SRC_RESULT: rd2_e_fw = result_pre_m;
-          `REGW_SRC_CSR:    rd2_e_fw = csr_data_m;
-          default:          rd2_e_fw = {32{1'bx}};
-        endcase
-      end
-      `FORWARD_WRITEBACK: rd2_e_fw = result_w;
-      default:            rd2_e_fw = {32{1'bx}};
-    endcase
+      .result_pre_m(result_pre_m),
+      .csr_data_m(csr_data_m),
+      .result_w(result_w),
 
-    case (forward_af_e)
-      `FORWARD_NONE:      rdf1_e_fw = rdf1_e;
-      `FORWARD_MEMORY:    rdf1_e_fw = result_pre_m;
-      `FORWARD_WRITEBACK: rdf1_e_fw = result_w;
-      default:            rdf1_e_fw = {32{1'bx}};
-    endcase
+      .forward_a_e(forward_a_e),
+      .forward_b_e(forward_b_e),
+      .forward_af_e(forward_af_e),
+      .forward_bf_e(forward_bf_e),
+      .forward_csr_data_e(forward_csr_data_e),
 
-    case (forward_bf_e)
-      `FORWARD_NONE:      rdf2_e_fw = rdf2_e;
-      `FORWARD_MEMORY:    rdf2_e_fw = result_pre_m;
-      `FORWARD_WRITEBACK: rdf2_e_fw = result_w;
-      default:            rdf2_e_fw = {32{1'bx}};
-    endcase
+      .regw_src_m(regw_src_m),
 
-    case (forward_csr_data_e)
-      `FORWARD_NONE:      csr_data_e_fw = csr_data_e;
-      `FORWARD_MEMORY:    csr_data_e_fw = result_pre_m;
-      `FORWARD_WRITEBACK: csr_data_e_fw = result_w;
-      default:            csr_data_e_fw = {32{1'bx}};
-    endcase
-  end
+      .rd1_e_fw(rd1_e_fw),
+      .rd2_e_fw(rd2_e_fw),
+      .rdf1_e_fw(rdf1_e_fw),
+      .rdf2_e_fw(rdf2_e_fw),
+      .csr_data_e_fw(csr_data_e_fw)
+  );
 
   reg [31:0] alu_src_a_val_e;
   reg [31:0] alu_src_b_val_e;
