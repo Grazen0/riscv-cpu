@@ -30,7 +30,7 @@ module ring_oscillator #(
 `endif
 endmodule
 
-module trng #(
+module rng #(
     parameter RING_SIZE  = 3,
     parameter RING_DELAY = 1,
     parameter OUT_WIDTH  = 32

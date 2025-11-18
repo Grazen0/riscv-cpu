@@ -11,10 +11,10 @@ static u64 rol64(const uint64_t x, const size_t k)
 
 static u64 rand_state[4];
 
-static u64 u64_from_trng(void)
+static u64 u64_from_rng(void)
 {
-    const u64 lo = TRNG;
-    const u64 hi = TRNG;
+    const u64 lo = RNG;
+    const u64 hi = RNG;
 
     return lo | (hi << 32);
 }
@@ -24,7 +24,7 @@ void rand_seed(void)
     bool zero = true;
 
     for (size_t i = 0; i < 4; ++i) {
-        rand_state[i] = u64_from_trng();
+        rand_state[i] = u64_from_rng();
         if (rand_state[i] != 0)
             zero = false;
     }

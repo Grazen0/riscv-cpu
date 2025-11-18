@@ -22,7 +22,7 @@ module tachyon_rv (
     output wire audio_out
 );
   localparam SEL_RAM = 4'd0;
-  localparam SEL_TRNG = 4'd1;
+  localparam SEL_RNG = 4'd1;
   localparam SEL_VTATTR = 4'd2;
   localparam SEL_VTDATA = 4'd3;
   localparam SEL_JOYPAD = 4'd4;
@@ -38,11 +38,11 @@ module tachyon_rv (
   wire [ 3:0] data_wenable;
   wire [31:0] mem_rdata;
 
-  wire [31:0] trng_rdata;
+  wire [31:0] rng_data;
 
-  trng seija (
+  rng seija (
       .clk(clk),
-      .out(trng_rdata)
+      .out(rng_data)
   );
 
   dual_word_ram #(
@@ -65,7 +65,7 @@ module tachyon_rv (
   always @(*) begin
     casez (data_addr[31:28])
       4'b000z: data_select = SEL_RAM;
-      4'b001z: data_select = SEL_TRNG;
+      4'b001z: data_select = SEL_RNG;
       4'b0100: data_select = SEL_VTATTR;
       4'b0101: data_select = SEL_VTDATA;
       4'b011z: data_select = SEL_JOYPAD;
@@ -78,7 +78,7 @@ module tachyon_rv (
 
     case (data_select)
       SEL_RAM:    data_rdata = mem_rdata;
-      SEL_TRNG:   data_rdata = trng_rdata;
+      SEL_RNG:   data_rdata = rng_data;
       SEL_VTATTR: data_rdata = {24'b0, tattr_rdata};
       SEL_VTDATA: data_rdata = {16'b0, tdata_rdata};
       SEL_JOYPAD: data_rdata = {24'b0, joypad_rdata};

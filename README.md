@@ -40,7 +40,7 @@ The **data memory** is organized as follows:
 |  Range start  | Size (bytes) |      Description      |
 | :-----------: | :----------: | :-------------------: |
 | `0x0000'0000` |    16384     | Instruction/data RAM  |
-| `0x2000'0000` |      4       |      TRNG value       |
+| `0x2000'0000` |      4       |       RNG value       |
 | `0x4000'0000` |     128      | Video tile attributes |
 | `0x5000'0000` |     128      |    Video tile data    |
 | `0x6000'0000` |      3       |    Joypad control     |

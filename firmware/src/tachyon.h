@@ -60,7 +60,7 @@ constexpr u8 JP_SELECT = 1 << 5;
 constexpr u8 JP_B = 1 << 6;
 constexpr u8 JP_A = 1 << 7;
 
-constexpr size_t TRNG_BASE = 0x2000'0000;
+constexpr size_t RNG_BASE = 0x2000'0000;
 constexpr size_t VTATTR_BASE = 0x4000'0000;
 constexpr size_t VTDATA_BASE = 0x5000'0000;
 constexpr size_t JOYPAD_BASE = 0x6000'0000;
@@ -69,7 +69,7 @@ constexpr size_t VCTRL_BASE = 0xA000'0000;
 constexpr size_t LCD_BASE = 0xC000'0000;
 constexpr size_t AUDIO_BASE = 0xE000'0000;
 
-#define TRNG (*(volatile u32 *)TRNG_BASE)
+#define RNG (*(volatile u32 *)RNG_BASE)
 #define VTATTR ((volatile u8 *)VTATTR_BASE)
 #define VTDATA ((volatile u16 *)VTDATA_BASE)
 #define JOYPAD ((Joypad *)JOYPAD_BASE)
