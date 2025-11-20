@@ -2,12 +2,12 @@
 
 module nes_bridge_tb ();
   reg clk, rst_n;
-  always #10 clk = ~clk;
+  always #5 clk = ~clk;
 
-  reg start;
+  reg  start;
 
-  wire [7:0] rdata;
-  wire scl, sda;
+  wire scl_out;
+  wire sda_out;
 
   nes_bridge bridge (
       .clk  (clk),
@@ -15,11 +15,9 @@ module nes_bridge_tb ();
 
       .start(start),
 
-      .rdata_addr(2'b00),
-      .rdata(rdata),
-
-      .scl(scl),
-      .sda_out(sda)
+      .scl_out(scl_out),
+      .sda_in (1'b1),
+      .sda_out(sda_out)
   );
 
   initial begin
@@ -28,12 +26,13 @@ module nes_bridge_tb ();
     clk   = 1;
     rst_n = 0;
     start = 0;
+    #1 rst_n = 1;
 
-    #5 rst_n = 1;
+    #10_000 start = 1;
+    #4_000 start = 0;
 
-    #20 start = 1;
-    #10 start = 0;
-
-    #100_000 $finish();
+    #600_000 $finish();
   end
 endmodule
+
+
