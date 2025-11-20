@@ -16,10 +16,12 @@ _start:
     la      t0, y
     flw     ft1, 0(t0)
 
-    fadd.s  ft2, ft0, ft1 # ft2 = 1.5 + 2.0 = 3.5
-    fadd.s  ft2, ft2, ft0 # ft2 += 1.5 = 5.0
+    add     x0, x1, x2
 
-    fsw     ft2, 4(t0)
+    #fadd.s  ft2, ft0, ft1 # ft2 = 1.5 + 2.0 = 3.5
+    #fadd.s  ft2, ft2, ft0 # ft2 += 1.5 = 5.0
+
+    #fsw     ft2, 4(t0)
 
     #call    main
     j       .
