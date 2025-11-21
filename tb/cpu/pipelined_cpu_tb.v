@@ -41,8 +41,8 @@ module pipelined_cpu_tb ();
 
   always @(posedge clk) begin
     #1;
-    if (data_wenable[0]) begin
-      $display("mem write: %h at addr %h", data_wdata, data_addr);
+    if (|data_wenable) begin
+      $display("mem write at %h: %h", data_addr, data_wdata);
     end
   end
 
@@ -53,6 +53,10 @@ module pipelined_cpu_tb ();
     rst_n = 0;
     #5 rst_n = 1;
 
-    #1000 $finish();
+    $display("");
+
+    #10_000;
+    $display("");
+    $finish();
   end
 endmodule

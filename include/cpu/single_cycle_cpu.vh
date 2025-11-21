@@ -1,8 +1,9 @@
 `ifndef SINGLE_CYCLE_CPU_VH
 `define SINGLE_CYCLE_CPU_VH
 
-`define ALU_SRC_A_RD 1'd0
-`define ALU_SRC_A_CSR 1'd1
+`define ALU_SRC_A_RD1 2'd0
+`define ALU_SRC_A_CSR 2'd1
+`define ALU_SRC_A_RDF1 2'd2
 
 `define ALU_SRC_B_RD2 2'd0
 `define ALU_SRC_B_IMM 2'd1

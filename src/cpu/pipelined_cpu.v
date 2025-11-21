@@ -434,7 +434,7 @@ module pipelined_cpu (
   wire [ 3:0] mem_write_d;
   wire [ 2:0] data_ext_control_d;
   wire [ 3:0] alu_control_d;
-  wire        alu_src_a_d;
+  wire [ 1:0] alu_src_a_d;
   wire [ 1:0] alu_src_b_d;
   wire [ 2:0] imm_src_d;
   wire        regw_src_d;
@@ -536,7 +536,7 @@ module pipelined_cpu (
   reg [ 3:0] mem_write_e;
   reg [ 2:0] data_ext_control_e;
   reg [ 3:0] alu_control_e;
-  reg        alu_src_a_e;
+  reg [ 1:0] alu_src_a_e;
   reg [ 1:0] alu_src_b_e;
   reg [11:0] csr_addr_e;
   reg        wd_sel_e;
@@ -708,9 +708,10 @@ module pipelined_cpu (
 
   always @(*) begin
     case (alu_src_a_e)
-      `ALU_SRC_A_RD:  alu_src_a_val_e = rd1_e_fw;
-      `ALU_SRC_A_CSR: alu_src_a_val_e = csr_data_e_fw;
-      default:        alu_src_a_val_e = {32{1'bx}};
+      `ALU_SRC_A_RD1:  alu_src_a_val_e = rd1_e_fw;
+      `ALU_SRC_A_CSR:  alu_src_a_val_e = csr_data_e_fw;
+      `ALU_SRC_A_RDF1: alu_src_a_val_e = rdf1_e_fw;
+      default:         alu_src_a_val_e = {32{1'bx}};
     endcase
 
     case (alu_src_b_e)

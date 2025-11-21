@@ -13,31 +13,43 @@ module cpu_csr_file (
     input wire [31:0] wdata,
     input wire wenable
 );
-  reg [31:0] mtvec, mepc;
-
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      mtvec <= 0;
-      mepc  <= 0;
-    end else begin
-      if (wenable) begin
-        case (waddr)
-          `CSR_MTVEC: mtvec <= wdata;
-          `CSR_MEPC:  mepc <= wdata;
-          default: begin
-          end
-        endcase
-      end
-    end
-  end
+  reg [31:0] mtvec, mtvec_next;
+  reg [31:0] mepc, mepc_next;
+  reg [63:0] mcycle, mcycle_next;
 
   always @(*) begin
+    mtvec_next  = mtvec;
+    mepc_next   = mepc;
+    mcycle_next = mcycle + 1;
+
+    if (wenable) begin
+      case (waddr)
+        `CSR_MTVEC:  mtvec_next = wdata;
+        `CSR_MEPC:   mepc_next = wdata;
+        `CSR_MCYCLE: mcycle_next[31:0] = wdata + 1;
+        default: begin
+        end
+      endcase
+    end
+
     case (raddr)
-      `CSR_MTVEC: rdata = mtvec;
-      `CSR_MEPC: rdata = mepc;
-      default: rdata = {32{1'bx}};
+      `CSR_MTVEC:  rdata = mtvec;
+      `CSR_MEPC:   rdata = mepc;
+      `CSR_MCYCLE: rdata = mcycle[31:0];
+      default:     rdata = {32{1'bx}};
     endcase
   end
 
+  always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+      mtvec  <= 0;
+      mepc   <= 0;
+      mcycle <= 0;
+    end else begin
+      mtvec  <= mtvec_next;
+      mepc   <= mepc_next;
+      mcycle <= mcycle_next;
+    end
+  end
 endmodule
 

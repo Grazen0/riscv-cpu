@@ -23,9 +23,7 @@ module top_scc (
   wire [31:0] data_addr, data_wdata, data_rdata;
   wire [3:0] data_wenable;
 
-  dual_word_ram #(
-      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem")
-  ) ram (
+  dual_word_ram ram (
       .clk(clk_out),
 
       .addr_1(data_addr[13:0]),

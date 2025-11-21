@@ -14,7 +14,7 @@ module scc_control (
     output reg [2:0] data_ext_control,
     output reg [3:0] mem_write,
     output reg [3:0] alu_control,
-    output reg alu_src_a,
+    output reg [1:0] alu_src_a,
     output reg [1:0] alu_src_b,
     output reg [2:0] imm_src,
     output reg regw_src,
@@ -30,7 +30,7 @@ module scc_control (
     result_src = `RESULT_SRC_ALU;
     mem_write = 4'b0000;
     alu_control = 4'b1111;
-    alu_src_a = `ALU_SRC_A_RD;
+    alu_src_a = `ALU_SRC_A_RD1;
     alu_src_b = `ALU_SRC_B_RD2;
     imm_src = `IMM_SRC_I;
     reg_write = 0;
@@ -137,17 +137,48 @@ module scc_control (
           csr_write  = 1;
         end
       end
-      7'b1010011: begin  // fp alu add/sub/mul/div
-        fp_alu_enable = 1;
-        result_src    = `RESULT_SRC_FP_ALU;
-        regf_write    = 1;
-
+      7'b1010011: begin  // some float instructions
         casez (funct7)
-          7'b00000zz: alu_control = {1'bx, `OP_ADD};
-          7'b00001zz: alu_control = {1'bx, `OP_SUB};
-          7'b00010zz: alu_control = {1'bx, `OP_MUL};
-          7'b00011zz: alu_control = {1'bx, `OP_DIV};
-          default:    alu_control = 4'bxxxx;
+          7'b00000zz: begin  // fadd
+            fp_alu_enable = 1;
+            alu_control = {1'bx, `OP_ADD};
+            result_src    = `RESULT_SRC_FP_ALU;
+            regf_write    = 1;
+          end
+          7'b00001zz: begin  // fsub
+            fp_alu_enable = 1;
+            alu_control = {1'bx, `OP_SUB };
+            result_src    = `RESULT_SRC_FP_ALU;
+            regf_write    = 1;
+          end
+          7'b00010zz: begin  // fmul
+            fp_alu_enable = 1;
+            alu_control = {1'bx, `OP_MUL};
+            result_src    = `RESULT_SRC_FP_ALU;
+            regf_write    = 1;
+          end
+          7'b00011zz: begin  // fdiv
+            fp_alu_enable = 1;
+            alu_control = {1'bx, `OP_DIV};
+            result_src    = `RESULT_SRC_FP_ALU;
+            regf_write    = 1;
+          end
+          7'b1110000: begin  // fmv.x.w
+            $display("hello");
+            alu_src_a   = `ALU_SRC_A_RDF1;
+            alu_control = `ALU_PASS_A;
+            result_src  = `RESULT_SRC_ALU;
+            reg_write   = 1;
+          end
+          7'b1111000: begin  // fmv.w.x
+            alu_src_a   = `ALU_SRC_A_RD1;
+            alu_control = `ALU_PASS_A;
+            result_src  = `RESULT_SRC_ALU;
+            regf_write  = 1;
+          end
+          default: begin
+            branch_type = `BRANCH_BREAK;
+          end
         endcase
       end
       7'b0000111: begin  // flw
@@ -225,7 +256,7 @@ module single_cycle_cpu (
   wire [ 2:0] result_src;
   wire        mem_write;
   wire [ 3:0] alu_control;
-  wire        alu_src_a;
+  wire [ 1:0] alu_src_a;
   wire [ 1:0] alu_src_b;
   wire [ 2:0] imm_src;
 
@@ -350,7 +381,7 @@ module single_cycle_cpu (
 
   always @(*) begin
     case (alu_src_a)
-      `ALU_SRC_A_RD:  alu_src_a_val = rd1;
+      `ALU_SRC_A_RD1: alu_src_a_val = rd1;
       `ALU_SRC_A_CSR: alu_src_a_val = csr_data;
       default:        alu_src_a_val = {32{1'bx}};
     endcase

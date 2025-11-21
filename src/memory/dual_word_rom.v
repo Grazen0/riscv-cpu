@@ -2,7 +2,7 @@
 
 module dual_word_rom #(
     parameter SIZE = 2 ** 12,
-    parameter SOURCE_FILE = ""
+    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem"
 ) (
     input wire [ADDR_WIDTH-1:0] addr_1,
     output wire [31:0] rdata_1,

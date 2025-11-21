@@ -22,9 +22,7 @@ module top_mcc (
   wire [31:0] mem_wdata;
   wire [ 3:0] mem_wenable;
 
-  dual_word_ram #(
-      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/data/firmware.mem")
-  ) ram (
+  dual_word_ram ram (
       .clk(clk),
 
       .addr_1(mem_addr[13:0]),
