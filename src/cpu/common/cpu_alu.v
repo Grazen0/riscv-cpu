@@ -36,18 +36,18 @@ module cpu_alu (
         overflow = (src_a[31] != src_b[31]) && (result[31] != src_a[31]);
         lt = result[31] ^ overflow;
       end
-      `ALU_SLL: result = src_a << shamt;
-      `ALU_SLT: result = {31'b0, src_a_signed < src_b_signed};
-      `ALU_SLTU: result = {31'b0, src_a < src_b};
-      `ALU_XOR: result = src_a ^ src_b;
-      `ALU_SRL: result = src_a >> shamt;
-      `ALU_SRA: result = src_a_signed >>> shamt;
-      `ALU_OR: result = src_a | src_b;
-      `ALU_AND: result = src_a & src_b;
-      `ALU_PASS_A: result = src_a;
-      `ALU_PASS_B: result = src_b;
+      `ALU_SLL:     result = src_a << shamt;
+      `ALU_SLT:     result = {31'b0, src_a_signed < src_b_signed};
+      `ALU_SLTU:    result = {31'b0, src_a < src_b};
+      `ALU_XOR:     result = src_a ^ src_b;
+      `ALU_SRL:     result = src_a >> shamt;
+      `ALU_SRA:     result = src_a_signed >>> shamt;
+      `ALU_OR:      result = src_a | src_b;
+      `ALU_AND:     result = src_a & src_b;
+      `ALU_PASS_A:  result = src_a;
+      `ALU_PASS_B:  result = src_b;
       `ALU_AND_NOT: result = src_a & ~src_b;
-      default: result = {32{1'bx}};
+      default:      result = {32{1'bx}};
     endcase
   end
 
