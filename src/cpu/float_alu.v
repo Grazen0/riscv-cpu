@@ -11,7 +11,7 @@ module x0 #(
   wire [6:0] seven;
 
   initial begin
-    $readmemh("data/x0.hex", ROM);
+    $readmemh("/home/jdgt/Code/utec/arqui/riscv-cpu/data/x0.hex", ROM);
   end
 
   assign seven = ROM[in];
@@ -110,10 +110,12 @@ module fp_recip (
       end else begin
         tmp = {1'b0, frac_in};
         shift_count = 0;
-        for (i = 0; i < M_WIDTH; i = i + 1) begin
-          if (tmp[M_WIDTH-1-i]) begin
-            shift_count = i;
-            i = M_WIDTH;
+        begin: search
+          for (i = 0; i < M_WIDTH; i = i + 1) begin
+            if (tmp[M_WIDTH-1-i]) begin
+              shift_count = i;
+              disable search;
+            end
           end
         end
         m_int = tmp << shift_count;
