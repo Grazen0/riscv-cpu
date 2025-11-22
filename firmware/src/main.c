@@ -7,6 +7,7 @@
 // Ideas for VBlank use and draw buffering from https://www.nesdev.org/wiki/The_frame_and_NMIs
 
 static constexpr size_t AUCH_SOUNDS = 0;
+static constexpr size_t AUCH_PAUSE_SOUND = 1;
 static constexpr size_t AUCH_MUSIC_BASS = 2;
 static constexpr size_t AUCH_MUSIC = 3;
 
@@ -250,13 +251,14 @@ static inline void game_step(void)
         ++snake_size;
         snake[snake_size - 1] = prev_tail;
 
+        // Go faster
         if (step_delay > STEP_DELAY_CAP && (snake_size % 2) == 0)
-            step_delay--;
+            --step_delay;
 
         randomize_apple();
         draw_buf_push(apple.x, apple.y, TATTR_APPLE);
 
-        audio_play_note(AUCH_SOUNDS, NOTE_A4, 9);
+        audio_play_note(AUCH_SOUNDS, NOTE_E5, 9);
     } else {
         draw_buf_push(prev_tail.pos.x, prev_tail.pos.y, TATTR_BACKGROUND);
     }
@@ -356,11 +358,18 @@ static inline void fixed_loop(void)
 
     const bool start_pressed = (joypad_pressed & JP_START) == 0;
 
+    static const AudioSequencePart pause_sound[] = {
+        {.note = NOTE_E6,  .duration = 7},
+        {.note = NOTE_C6,  .duration = 7},
+        {.note = NOTE_E6,  .duration = 7},
+        {.note = NOTE_C6, .duration = 21},
+    };
+
     if (paused) {
         if (start_pressed) {
-            audio_play_note(AUCH_SOUNDS, NOTE_A3, 6);
             audio_set_paused(AUCH_MUSIC, false);
             audio_set_paused(AUCH_MUSIC_BASS, false);
+            audio_play_sequence(AUCH_PAUSE_SOUND, pause_sound, ARR_SIZE(pause_sound), false);
             paused = false;
         }
 
@@ -369,12 +378,11 @@ static inline void fixed_loop(void)
 
     if (start_pressed) {
         if (!dead) {
-            audio_play_note(AUCH_SOUNDS, NOTE_A3, 6);
             audio_set_paused(AUCH_MUSIC, true);
             audio_set_paused(AUCH_MUSIC_BASS, true);
+            audio_play_sequence(AUCH_PAUSE_SOUND, pause_sound, ARR_SIZE(pause_sound), false);
             paused = true;
         } else {
-
             game_init();
         }
 
@@ -457,7 +465,7 @@ void main(void)
     static constexpr size_t HALF = 2 * QUARTER;
     static constexpr size_t BEAT = 2 * HALF;
 
-    static const AudioSequencePart night_of_nights[] = {
+    static const AudioSequencePart music[] = {
         {  .note = NOTE_A4,    .duration = HALF},
         {  .note = NOTE_F5,    .duration = HALF},
         {  .note = NOTE_E5, .duration = QUARTER},
@@ -542,7 +550,7 @@ void main(void)
         {.note = NOTE_NONE,    .duration = BEAT},
     };
 
-    static const AudioSequencePart night_of_nights_bass[] = {
+    static const AudioSequencePart music_bass[] = {
         {.note = NOTE_AS1, .duration = HALF},
         { .note = NOTE_E3, .duration = HALF},
         {.note = NOTE_AS1, .duration = HALF},
@@ -616,13 +624,13 @@ void main(void)
         { .note = NOTE_C3, .duration = HALF},
     };
 
-    audio_set_volume(AUCH_MUSIC, AUDIO_MAX_VOLUME / 2);
-    audio_set_volume(AUCH_MUSIC_BASS, AUDIO_MAX_VOLUME / 4);
+    audio_set_volume(AUCH_SOUNDS, AUDIO_MAX_VOLUME);
+    audio_set_volume(AUCH_PAUSE_SOUND, AUDIO_MAX_VOLUME * 0.75);
+    audio_set_volume(AUCH_MUSIC, AUDIO_MAX_VOLUME * 0.75);
+    audio_set_volume(AUCH_MUSIC_BASS, AUDIO_MAX_VOLUME * 0.5);
 
-    audio_play_sequence(AUCH_MUSIC, night_of_nights,
-                        sizeof(night_of_nights) / sizeof(night_of_nights[0]), true);
-    audio_play_sequence(AUCH_MUSIC_BASS, night_of_nights_bass,
-                        sizeof(night_of_nights_bass) / sizeof(night_of_nights_bass[0]), true);
+    audio_play_sequence(AUCH_MUSIC, music, ARR_SIZE(music), true);
+    audio_play_sequence(AUCH_MUSIC_BASS, music_bass, ARR_SIZE(music_bass), true);
 
     game_init();
 

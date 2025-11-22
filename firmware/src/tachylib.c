@@ -177,10 +177,6 @@ void audio_tick(void)
                     ctrl->seq_idx_next = 0;
             }
         }
-        // else if (ctrl->seq != nullptr && ctrl->timer == 6) {
-        //     // Stop note sound a bit before ending the part
-        //     AUDIO->channels[i] = NOTE_NONE;
-        // }
 
         if (ctrl->is_playing)
             --ctrl->timer;

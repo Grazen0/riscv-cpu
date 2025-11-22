@@ -5,6 +5,8 @@
 #include "tachyon.h"
 #include <stddef.h>
 
+#define ARR_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
+
 typedef struct {
     u32 note;
     u32 duration;

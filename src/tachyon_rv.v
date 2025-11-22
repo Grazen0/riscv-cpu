@@ -29,7 +29,7 @@ module tachyon_rv (
   localparam SEL_VPAL = 4'd5;
   localparam SEL_VCTRL = 4'd6;
   localparam SEL_LCD = 4'd7;
-  localparam SEL_AUDIO = 4'd9;
+  localparam SEL_AUDIO = 4'd8;
 
   wire [31:0] instr_data;
   wire [31:0] instr_addr;
