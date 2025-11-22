@@ -2,7 +2,7 @@
 
 module dual_word_ram #(
     parameter SIZE_WORDS  = 2 ** 12,
-    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem",
+    parameter SOURCE_FILE = "",
     parameter ADDR_WIDTH  = $clog2(4 * SIZE_WORDS)
 ) (
     input wire clk,
@@ -42,6 +42,8 @@ module dual_word_ram #(
   assign rdata_2 = data[word_addr_2] >> (8 * offset_2);
 
   initial begin
-    $readmemh(SOURCE_FILE, data);
+    if (SOURCE_FILE != "") begin
+      $readmemh(SOURCE_FILE, data);
+    end
   end
 endmodule

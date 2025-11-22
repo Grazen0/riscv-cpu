@@ -12,7 +12,9 @@ module pipelined_cpu_tb ();
   wire [31:0] instr_rdata;
   wire [31:0] data_rdata;
 
-  dual_word_ram ram (
+  dual_word_ram #(
+      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem")
+  ) ram (
       .clk(clk),
 
       .addr_1(data_addr[13:0]),

@@ -45,7 +45,9 @@ module tachyon_rv (
       .out(rng_data)
   );
 
-  dual_word_ram patchy (
+  dual_word_ram #(
+      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem")
+  ) patchy (
       .clk(clk),
 
       .addr_1   (data_addr[13:0]),

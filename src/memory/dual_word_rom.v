@@ -2,7 +2,7 @@
 
 module dual_word_rom #(
     parameter SIZE = 2 ** 12,
-    parameter SOURCE_FILE = "/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem"
+    parameter SOURCE_FILE = ""
 ) (
     input wire [ADDR_WIDTH-1:0] addr_1,
     output wire [31:0] rdata_1,
@@ -24,6 +24,8 @@ module dual_word_rom #(
   assign rdata_2 = data[word_addr_2] >> (8 * offset_2);
 
   initial begin
-    $readmemh(SOURCE_FILE, data);
+    if (SOURCE_FILE != "") begin
+      $readmemh(SOURCE_FILE, data);
+    end
   end
 endmodule
