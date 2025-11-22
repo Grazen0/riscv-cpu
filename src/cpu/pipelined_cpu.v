@@ -678,28 +678,28 @@ module pipelined_cpu (
   wire [31:0] csr_data_e_fw;
 
   pl_forwarding_unit forwarding_unit (
-      .rd1_e(rd1_e),
-      .rd2_e(rd2_e),
-      .rdf1_e(rdf1_e),
-      .rdf2_e(rdf2_e),
+      .rd1_e     (rd1_e),
+      .rd2_e     (rd2_e),
+      .rdf1_e    (rdf1_e),
+      .rdf2_e    (rdf2_e),
       .csr_data_e(csr_data_e),
 
       .result_pre_m(result_pre_m),
-      .csr_data_m(csr_data_m),
-      .result_w(result_w),
+      .csr_data_m  (csr_data_m),
+      .result_w    (result_w),
 
-      .forward_a_e(forward_a_e),
-      .forward_b_e(forward_b_e),
-      .forward_af_e(forward_af_e),
-      .forward_bf_e(forward_bf_e),
+      .forward_a_e       (forward_a_e),
+      .forward_b_e       (forward_b_e),
+      .forward_af_e      (forward_af_e),
+      .forward_bf_e      (forward_bf_e),
       .forward_csr_data_e(forward_csr_data_e),
 
       .regw_src_m(regw_src_m),
 
-      .rd1_e_fw(rd1_e_fw),
-      .rd2_e_fw(rd2_e_fw),
-      .rdf1_e_fw(rdf1_e_fw),
-      .rdf2_e_fw(rdf2_e_fw),
+      .rd1_e_fw     (rd1_e_fw),
+      .rd2_e_fw     (rd2_e_fw),
+      .rdf1_e_fw    (rdf1_e_fw),
+      .rdf2_e_fw    (rdf2_e_fw),
       .csr_data_e_fw(csr_data_e_fw)
   );
 
