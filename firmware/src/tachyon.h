@@ -36,8 +36,16 @@ typedef struct {
     volatile bool display_on;
 } VideoControl;
 
+constexpr size_t AUDIO_CHANNELS = 4;
+constexpr u16 AUDIO_MAX_VOLUME = 256;
+
 typedef struct {
-    volatile u32 half_period;
+    volatile u32 note;
+    volatile u16 volume;
+} AudioChannel;
+
+typedef struct {
+    AudioChannel channels[AUDIO_CHANNELS];
 } AudioControl;
 
 typedef struct {

@@ -164,7 +164,6 @@ module scc_control (
             regf_write    = 1;
           end
           7'b1110000: begin  // fmv.x.w
-            $display("hello");
             alu_src_a   = `ALU_SRC_A_RDF1;
             alu_control = `ALU_PASS_A;
             result_src  = `RESULT_SRC_ALU;
@@ -215,9 +214,9 @@ module scc_branch_logic (
 );
   always @(*) begin
     case (branch_type)
-      `BRANCH_NONE: pc_src = `PC_SRC_STEP;
-      `BRANCH_JALR: pc_src = `PC_SRC_ALU;
-      `BRANCH_JAL: pc_src = `PC_SRC_TARGET;
+      `BRANCH_NONE:  pc_src = `PC_SRC_STEP;
+      `BRANCH_JALR:  pc_src = `PC_SRC_ALU;
+      `BRANCH_JAL:   pc_src = `PC_SRC_TARGET;
       `BRANCH_BREAK: pc_src = `PC_SRC_CURRENT;
       `BRANCH_COND: begin
         pc_src = `PC_SRC_STEP;
@@ -232,7 +231,7 @@ module scc_branch_logic (
           default: pc_src = {2'bxx};
         endcase
       end
-      default: pc_src = {2'bxx};
+      default:       pc_src = {2'bxx};
     endcase
   end
 endmodule

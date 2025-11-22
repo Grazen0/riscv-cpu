@@ -77,65 +77,114 @@ void video_set_tile(const u8 tx, const u8 ty, const u8 tattr)
     VTATTR[(ty * VIDEO_TILES_H) + tx] = tattr;
 }
 
-static const AudioSequencePart *audio_seq = nullptr;
-static size_t audio_seq_size;
-static size_t audio_timer = 0;
-static size_t audio_idx_next = 0;
-static bool audio_playing;
+typedef struct {
+    const AudioSequencePart *seq;
+    u32 cur_note;
+    size_t seq_size;
+    size_t seq_idx_next;
+    size_t timer;
+    bool is_playing;
+    bool loop;
+    bool paused;
+} AudioChannelPlayer;
+
+static AudioChannelPlayer audio_ctrl[AUDIO_CHANNELS];
 
 void audio_init(void)
 {
-    AUDIO->half_period = NOTE_NONE;
-    audio_seq = nullptr;
-    audio_seq_size = 0;
-    audio_timer = 0;
-    audio_idx_next = 0;
-    audio_playing = false;
+    for (size_t i = 0; i < AUDIO_CHANNELS; ++i) {
+        AUDIO->channels[i].note = NOTE_NONE;
+
+        audio_ctrl[i] = (AudioChannelPlayer){
+            .seq = nullptr,
+            .cur_note = NOTE_NONE,
+            .seq_size = 0,
+            .seq_idx_next = 0,
+            .timer = 0,
+            .is_playing = false,
+            .loop = false,
+            .paused = false,
+        };
+    }
 }
 
-void audio_play_note(const MusicNote note, const size_t duration)
+void audio_play_note(const size_t channel, const MusicNote note, const size_t duration)
 {
-    audio_seq = nullptr;
-    audio_seq_size = 0;
+    audio_ctrl[channel].seq = nullptr;
+    audio_ctrl[channel].cur_note = note;
+    audio_ctrl[channel].seq_size = 0;
+    audio_ctrl[channel].seq_idx_next = 0;
+    audio_ctrl[channel].timer = duration;
+    audio_ctrl[channel].is_playing = true;
 
-    AUDIO->half_period = note;
-    audio_timer = duration;
-    audio_idx_next = 0;
-    audio_playing = true;
+    AUDIO->channels[channel].note = note;
+}
+
+void audio_play_sequence(const size_t channel, const AudioSequencePart seq[], const size_t n,
+                         const bool loop)
+{
+    audio_ctrl[channel].seq = seq;
+    audio_ctrl[channel].seq_size = n;
+    audio_ctrl[channel].seq_idx_next = 0;
+    audio_ctrl[channel].timer = 0;
+    audio_ctrl[channel].is_playing = true;
+    audio_ctrl[channel].loop = loop;
+}
+
+void audio_set_paused(const size_t channel, const bool paused)
+{
+    audio_ctrl[channel].paused = paused;
+
+    if (paused)
+        AUDIO->channels[channel].note = NOTE_NONE;
+    else
+        AUDIO->channels[channel].note = audio_ctrl[channel].cur_note;
+}
+
+void audio_set_volume(const size_t channel, const u16 volume)
+{
+    AUDIO->channels[channel].volume = volume;
 }
 
 void audio_tick(void)
 {
-    if (!audio_playing)
-        return;
+    for (size_t i = 0; i < AUDIO_CHANNELS; ++i) {
+        AudioChannelPlayer *const ctrl = &audio_ctrl[i];
 
-    if (audio_timer == 0) {
-        if (audio_idx_next >= audio_seq_size) {
-            // Finished
-            AUDIO->half_period = NOTE_NONE;
-            audio_seq = nullptr;
-            audio_seq_size = 0;
-            audio_playing = false;
-        } else {
-            // Next note
-            const AudioSequencePart part = audio_seq[audio_idx_next];
-            AUDIO->half_period = part.half_period;
-            audio_timer = part.duration;
+        if (!ctrl->is_playing || ctrl->paused)
+            continue;
 
-            ++audio_idx_next;
+        if (ctrl->timer == 0) {
+            if (ctrl->seq_idx_next >= ctrl->seq_size) {
+                // Finished sound/sequence
+                AUDIO->channels[i].note = NOTE_NONE;
+
+                ctrl->seq = nullptr;
+                ctrl->cur_note = NOTE_NONE;
+                ctrl->seq_size = 0;
+                ctrl->seq_idx_next = 0;
+                ctrl->is_playing = false;
+            } else {
+                // Next sequence part
+                const AudioSequencePart part = ctrl->seq[ctrl->seq_idx_next];
+                AUDIO->channels[i].note = part.note;
+
+                ctrl->cur_note = part.note;
+                ctrl->timer = part.duration;
+                ++ctrl->seq_idx_next;
+
+                if (ctrl->loop && ctrl->seq_idx_next >= ctrl->seq_size)
+                    ctrl->seq_idx_next = 0;
+            }
         }
+        // else if (ctrl->seq != nullptr && ctrl->timer == 6) {
+        //     // Stop note sound a bit before ending the part
+        //     AUDIO->channels[i] = NOTE_NONE;
+        // }
+
+        if (ctrl->is_playing)
+            --ctrl->timer;
     }
-
-    --audio_timer;
-}
-
-void audio_play_sequence(const AudioSequencePart seq[], const size_t n)
-{
-    audio_seq = seq;
-    audio_seq_size = n;
-    audio_idx_next = 0;
-    audio_timer = 0;
-    audio_playing = true;
 }
 
 u8 joypad_read(void)

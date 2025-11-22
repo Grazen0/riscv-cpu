@@ -59,7 +59,7 @@ IVERILOG_FLAGS := -DIVERILOG
 
 .PHONY: all clean wave compdb firmware
 
-all: $(VCD_DUMPS)
+all: $(TARGETS)
 
 clean:
 	rm -rf $(BUILD_DIR)

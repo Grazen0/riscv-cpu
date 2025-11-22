@@ -3,9 +3,12 @@
 #include "tachylib.h"
 #include "tachyon.h"
 #include <stddef.h>
-#include <stdio.h>
 
 // Ideas for VBlank use and draw buffering from https://www.nesdev.org/wiki/The_frame_and_NMIs
+
+static constexpr size_t AUCH_SOUNDS = 0;
+static constexpr size_t AUCH_MUSIC_BASS = 2;
+static constexpr size_t AUCH_MUSIC = 3;
 
 typedef enum : u8 {
     DIR_UP,
@@ -236,7 +239,7 @@ static inline void game_step(void)
     }
 
     if (dead) {
-        audio_play_note(NOTE_C2, 36);
+        audio_play_note(AUCH_SOUNDS, NOTE_C2, 36);
         // TODO: buffer this
         video_load_palette(PAL_SNAKE, PALDATA_SNAKE_LOSE);
         return;
@@ -253,7 +256,7 @@ static inline void game_step(void)
         randomize_apple();
         draw_buf_push(apple.x, apple.y, TATTR_APPLE);
 
-        audio_play_note(NOTE_A4, 9);
+        audio_play_note(AUCH_SOUNDS, NOTE_A4, 9);
     } else {
         draw_buf_push(prev_tail.pos.x, prev_tail.pos.y, TATTR_BACKGROUND);
     }
@@ -292,9 +295,6 @@ __attribute__((interrupt)) void irq_handler(void)
     if (!enable_irq)
         return;
 
-    static i32 audio_timer = 0;
-    static u32 audio_idx = 0;
-
     draw_buf_flush();
     sleeping = false;
 }
@@ -330,6 +330,9 @@ static void game_init(void)
     paused = false;
     dead = false;
 
+    audio_set_paused(AUCH_MUSIC, false);
+    audio_set_paused(AUCH_MUSIC_BASS, false);
+
     draw_buf_push(snake[0].pos.x, snake[0].pos.y, TATTR_SNAKE_HEAD[snake[0].dir]);
     draw_buf_push(apple.x, apple.y, TATTR_APPLE);
 }
@@ -355,7 +358,9 @@ static inline void fixed_loop(void)
 
     if (paused) {
         if (start_pressed) {
-            audio_play_note(NOTE_A3, 6);
+            audio_play_note(AUCH_SOUNDS, NOTE_A3, 6);
+            audio_set_paused(AUCH_MUSIC, false);
+            audio_set_paused(AUCH_MUSIC_BASS, false);
             paused = false;
         }
 
@@ -364,7 +369,9 @@ static inline void fixed_loop(void)
 
     if (start_pressed) {
         if (!dead) {
-            audio_play_note(NOTE_A3, 6);
+            audio_play_note(AUCH_SOUNDS, NOTE_A3, 6);
+            audio_set_paused(AUCH_MUSIC, true);
+            audio_set_paused(AUCH_MUSIC_BASS, true);
             paused = true;
         } else {
 
@@ -396,18 +403,12 @@ static inline void fixed_loop(void)
 }
 
 float mat1[] = {3.0, 4.0, 7.0, 2.0, 5.0, 9.0};
-
 float mat2[] = {3.0, 1.0, 5.0, 6.0, 9.0, 7.0};
-
 float dest[3 * 3];
-
 extern void matmul(const float *mat1, const float *mat2, int m, int n, int p, float *dest);
 
 void main(void)
 {
-    matmul(mat1, mat2, 3, 2, 3, dest);
-    return;
-
     enable_irq = false;
     VCTRL->display_on = false;
 
@@ -451,6 +452,177 @@ void main(void)
         video_set_tile(0, y, TATTR_WALL);
         video_set_tile(VIDEO_TILES_H - 1, y, TATTR_WALL);
     }
+
+    static constexpr size_t QUARTER = 7;
+    static constexpr size_t HALF = 2 * QUARTER;
+    static constexpr size_t BEAT = 2 * HALF;
+
+    static const AudioSequencePart night_of_nights[] = {
+        {  .note = NOTE_A4,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_C5, .duration = QUARTER},
+
+        {  .note = NOTE_D5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        {  .note = NOTE_C6,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+
+        {  .note = NOTE_A4,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_C5, .duration = QUARTER},
+
+        {  .note = NOTE_D5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        { .note = NOTE_CS6,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+
+        {  .note = NOTE_A4,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_F5, .duration = QUARTER},
+        {  .note = NOTE_E5, .duration = QUARTER},
+        {  .note = NOTE_C5, .duration = QUARTER},
+
+        {  .note = NOTE_D5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        {  .note = NOTE_G5, .duration = QUARTER},
+        {  .note = NOTE_A5, .duration = QUARTER},
+        {  .note = NOTE_C6,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+        {  .note = NOTE_F5,    .duration = HALF},
+        { .note = NOTE_FS5,    .duration = HALF},
+
+        {  .note = NOTE_G5,    .duration = BEAT},
+        {.note = NOTE_NONE,    .duration = HALF},
+        {  .note = NOTE_G5,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = BEAT},
+        {.note = NOTE_NONE,    .duration = HALF},
+        {  .note = NOTE_A5,    .duration = HALF},
+
+        { .note = NOTE_AS5,    .duration = HALF},
+        { .note = NOTE_AS5,    .duration = HALF},
+        {  .note = NOTE_B5,    .duration = HALF},
+        {  .note = NOTE_B5,    .duration = HALF},
+        {  .note = NOTE_C6,    .duration = BEAT},
+        {.note = NOTE_NONE,    .duration = BEAT},
+    };
+
+    static const AudioSequencePart night_of_nights_bass[] = {
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_F3, .duration = HALF},
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_F3, .duration = HALF},
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_C3, .duration = HALF},
+
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+        { .note = NOTE_E2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_F2, .duration = HALF},
+        { .note = NOTE_F3, .duration = HALF},
+        { .note = NOTE_G2, .duration = HALF},
+        { .note = NOTE_G3, .duration = HALF},
+
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_F3, .duration = HALF},
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_F3, .duration = HALF},
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+        { .note = NOTE_D2, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+
+        { .note = NOTE_G1, .duration = HALF},
+        {.note = NOTE_AS2, .duration = HALF},
+        { .note = NOTE_G1, .duration = HALF},
+        {.note = NOTE_AS2, .duration = HALF},
+        { .note = NOTE_A1, .duration = HALF},
+        { .note = NOTE_A2, .duration = HALF},
+        { .note = NOTE_A1, .duration = HALF},
+        { .note = NOTE_A2, .duration = HALF},
+
+        {.note = NOTE_AS1, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+        { .note = NOTE_B1, .duration = HALF},
+        { .note = NOTE_D3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_E3, .duration = HALF},
+        { .note = NOTE_C2, .duration = HALF},
+        { .note = NOTE_C3, .duration = HALF},
+    };
+
+    audio_set_volume(AUCH_MUSIC, AUDIO_MAX_VOLUME / 2);
+    audio_set_volume(AUCH_MUSIC_BASS, AUDIO_MAX_VOLUME / 4);
+
+    audio_play_sequence(AUCH_MUSIC, night_of_nights,
+                        sizeof(night_of_nights) / sizeof(night_of_nights[0]), true);
+    audio_play_sequence(AUCH_MUSIC_BASS, night_of_nights_bass,
+                        sizeof(night_of_nights_bass) / sizeof(night_of_nights_bass[0]), true);
 
     game_init();
 

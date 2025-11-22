@@ -29,7 +29,7 @@ module tachyon_rv (
   localparam SEL_VPAL = 4'd5;
   localparam SEL_VCTRL = 4'd6;
   localparam SEL_LCD = 4'd7;
-  localparam SEL_AUDIO = 4'd8;
+  localparam SEL_AUDIO = 4'd9;
 
   wire [31:0] instr_data;
   wire [31:0] instr_addr;
@@ -150,16 +150,27 @@ module tachyon_rv (
   );
 
   wire [31:0] audio_rdata;
+  wire [ 8:0] audio_duty;
 
   audio_unit raiko (
       .clk  (clk),
       .rst_n(rst_n),
 
-      .wenable(data_wenable[0] && data_select == SEL_AUDIO),
-      .wdata  (data_wdata),
-      .rdata  (audio_rdata),
+      .channel_sel(data_addr[4:3]),
+      .pv_sel     (data_addr[2]),
+      .wdata      (data_wdata),
+      .wenable    (|data_wenable && data_select == SEL_AUDIO),
+      .rdata      (audio_rdata),
 
-      .out(audio_out)
+      .out(audio_duty)
+  );
+
+  pwm_generator hina (
+      .clk  (clk),
+      .rst_n(rst_n),
+
+      .duty(audio_duty),
+      .out (audio_out)
   );
 
   wire [7:0] joypad_rdata;
