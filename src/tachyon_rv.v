@@ -89,9 +89,17 @@ module tachyon_rv (
     endcase
   end
 
+  wire rst_n_sync;
+
+  synchronizer rst_synchronizer (
+      .clk(clk),
+      .in (rst_n),
+      .out(rst_n_sync)
+  );
+
   pipelined_cpu koishi (
       .clk  (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .instr_addr(instr_addr),
       .instr_data(instr_data),
@@ -111,7 +119,7 @@ module tachyon_rv (
   video_unit keiki (
       .clk  (clk_vga),
       .wclk (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .tattr_addr   (data_addr[8:0]),
       .tattr_wdata  (data_wdata[7:0]),
@@ -140,7 +148,7 @@ module tachyon_rv (
 
   lcd_unit nitori (
       .clk  (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .rs     (data_addr[0]),
       .wdata  (data_wdata[7:0]),
@@ -156,7 +164,7 @@ module tachyon_rv (
 
   audio_unit raiko (
       .clk  (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .channel_sel(data_addr[4:3]),
       .pv_sel     (data_addr[2]),
@@ -169,7 +177,7 @@ module tachyon_rv (
 
   pwm_generator hina (
       .clk  (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .duty(audio_duty),
       .out (audio_out)
@@ -179,7 +187,7 @@ module tachyon_rv (
 
   nes_bridge sanae (
       .clk  (clk),
-      .rst_n(rst_n),
+      .rst_n(rst_n_sync),
 
       .start(data_wenable[0] && data_select == SEL_JOYPAD),
 
