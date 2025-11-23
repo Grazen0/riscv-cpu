@@ -40,16 +40,10 @@ module cpu_csr_file (
     endcase
   end
 
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      mtvec  <= 0;
-      mepc   <= 0;
-      mcycle <= 0;
-    end else begin
-      mtvec  <= mtvec_next;
-      mepc   <= mepc_next;
-      mcycle <= mcycle_next;
-    end
+  always @(posedge clk) begin
+    mtvec  <= mtvec_next;
+    mepc   <= mepc_next;
+    mcycle <= mcycle_next;
   end
 endmodule
 

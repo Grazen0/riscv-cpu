@@ -361,8 +361,7 @@ module multi_cycle_cpu (
 
 
   cpu_register_file register_file (
-      .clk  (clk),
-      .rst_n(rst_n),
+      .clk(clk),
 
       .a1(instr[19:15]),
       .a2(instr[24:20]),

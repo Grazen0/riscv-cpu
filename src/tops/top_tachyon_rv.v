@@ -26,7 +26,6 @@ module top_tachyon_rv (
       .PERIOD(2)
   ) divider (
       .clk_in (clk),
-      .rst_n  (rst_n),
       .clk_out(clk_half)
   );
 `else

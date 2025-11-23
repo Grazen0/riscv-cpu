@@ -478,8 +478,7 @@ module pipelined_cpu (
   );
 
   cpu_register_file register_file (
-      .clk  (~clk),
-      .rst_n(rst_n),
+      .clk(~clk),
 
       .a1 (rs1_d),
       .a2 (rs2_d),
@@ -494,8 +493,7 @@ module pipelined_cpu (
   cpu_register_file #(
       .HARDWIRE_ZERO(0)
   ) float_register_file (
-      .clk  (~clk),
-      .rst_n(rst_n),
+      .clk(~clk),
 
       .a1 (rs1_d),
       .a2 (rs2_d),
@@ -510,8 +508,7 @@ module pipelined_cpu (
   wire [11:0] csr_addr_d = instr_d[31:20];
 
   cpu_csr_file csr_file (
-      .clk  (~clk),
-      .rst_n(rst_n),
+      .clk(~clk),
 
       .raddr(trap_pc ? `CSR_MTVEC : trap_mret_d ? `CSR_MEPC : csr_addr_d),
       .rdata(csr_data_d),

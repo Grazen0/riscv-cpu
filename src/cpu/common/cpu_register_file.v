@@ -4,7 +4,7 @@ module cpu_register_file #(
     parameter HARDWIRE_ZERO = 1
 ) (
     input wire clk,
-    input wire rst_n,
+
     input wire [4:0] a1,
     input wire [4:0] a2,
     input wire [4:0] a3,
@@ -21,17 +21,9 @@ module cpu_register_file #(
 
   integer i;
 
-  always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-      // Reset registers
-      // TODO: remove this eventually
-      for (i = REGS_START; i < REGS_SIZE; i = i + 1) begin
-        regs[i] <= 0;
-      end
-    end else begin
-      if (we3 && (!HARDWIRE_ZERO || a3 != 0)) begin
-        regs[a3] <= wd3;
-      end
+  always @(posedge clk) begin
+    if (we3 && (!HARDWIRE_ZERO || a3 != 0)) begin
+      regs[a3] <= wd3;
     end
   end
 

@@ -359,8 +359,7 @@ module single_cycle_cpu (
   wire [4:0] a1 = instr_data[19:15];
 
   cpu_register_file register_file (
-      .clk  (clk),
-      .rst_n(rst_n),
+      .clk(clk),
 
       .a1 (a1),
       .a2 (instr_data[24:20]),
