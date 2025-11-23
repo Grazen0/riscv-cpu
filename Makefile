@@ -57,7 +57,7 @@ IVERILOG_FLAGS := -DIVERILOG
 # -DRAM_SOURCE_FILE='"$(RAM_SOURCE)"' -DROM_SOURCE_FILE='"$(ROM_SOURCE)"'
 
 
-.PHONY: all clean wave compdb firmware
+.PHONY: all clean run wave compdb firmware
 
 all: $(TARGETS)
 
@@ -109,6 +109,11 @@ $(BUILD_DIR)/%.vcd: $(BUILD_DIR)/%.out
 	mkdir -p $(dir $@)
 	vvp $(VVP_FLAGS) $<
 	mv dump.vcd $@
+
+run: $(BUILD_DIR)/$(TB).out
+	mkdir -p $(dir $(BUILD_DIR)/$(TB))
+	vvp $(VVP_FLAGS) $<
+	mv dump.vcd $(BUILD_DIR)/$(TB).vcd
 
 wave: $(BUILD_DIR)/$(TB).vcd
 	gtkwave $<
