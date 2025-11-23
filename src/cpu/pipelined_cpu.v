@@ -400,7 +400,7 @@ module pipelined_cpu (
   always @(posedge clk) begin
     if (!rst_n) begin
       pc_f <= 0;
-    end else if ((trap_stages || !stall_f) && !stall_f_irq) begin
+    end else if (!stall_f) begin
       pc_f <= pc_next;
     end
   end
@@ -432,23 +432,16 @@ module pipelined_cpu (
   reg         bubble_d;
 
   always @(posedge clk) begin
-    if (!rst_n) begin
+    if (!rst_n || flush_d) begin
       instr_d     <= 32'h00000013;  // nop
       pc_d        <= {32{1'bx}};
       pc_plus_4_d <= {32{1'bx}};
       bubble_d    <= 1;
-    end else begin
-      if (flush_d) begin
-        instr_d     <= 32'h00000013;  // nop
-        pc_d        <= {32{1'bx}};
-        pc_plus_4_d <= {32{1'bx}};
-        bubble_d    <= 1;
-      end else if (!stall_d) begin
-        instr_d     <= instr_data;
-        pc_d        <= pc_f;
-        pc_plus_4_d <= pc_plus_4_f;
-        bubble_d    <= 0;
-      end
+    end else if (!stall_d) begin
+      instr_d     <= instr_data;
+      pc_d        <= pc_f;
+      pc_plus_4_d <= pc_plus_4_f;
+      bubble_d    <= 0;
     end
   end
 
@@ -583,7 +576,7 @@ module pipelined_cpu (
   reg        fp_alu_start;
 
   always @(posedge clk) begin
-    if (!rst_n) begin
+    if (!rst_n || flush_e) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
       regf_write_e       <= 0;
@@ -615,75 +608,41 @@ module pipelined_cpu (
       bubble_e           <= 1;
 
       fp_alu_start       <= 0;
+    end else if (!stall_e) begin
+      regw_src_e         <= regw_src_d;
+      reg_write_e        <= reg_write_d;
+      regf_write_e       <= regf_write_d;
+      csr_write_e        <= csr_write_d;
+      result_src_e       <= result_src_d;
+      mem_write_e        <= mem_write_d;
+      data_ext_control_e <= data_ext_control_d;
+      alu_control_e      <= alu_control_d;
+      alu_src_a_e        <= alu_src_a_d;
+      alu_src_b_e        <= alu_src_b_d;
+      csr_addr_e         <= csr_addr_d;
+      wd_sel_e           <= wd_sel_d;
+      fp_alu_enable_e    <= fp_alu_enable_d;
+
+      rd1_e              <= rd1_d;
+      rd2_e              <= rd2_d;
+      rdf1_e             <= rdf1_d;
+      rdf2_e             <= rdf2_d;
+      csr_data_e         <= csr_data_d;
+      pc_e               <= pc_d;
+      rs1_e              <= rs1_d;
+      rs2_e              <= rs2_d;
+      rd_e               <= rd_d;
+      imm_ext_e          <= imm_ext_d;
+      pc_plus_4_e        <= pc_plus_4_d;
+      branch_type_e      <= branch_type_d;
+      funct3_e           <= funct3_d;
+
+      bubble_e           <= bubble_d;
+
+      fp_alu_start       <= fp_alu_enable_d;
     end else begin
-      if (flush_e) begin
-        regw_src_e         <= 0;
-        reg_write_e        <= 0;
-        regf_write_e       <= 0;
-        csr_write_e        <= 0;
-        result_src_e       <= `RESULT_SRC_ALU;
-        mem_write_e        <= 0;
-        data_ext_control_e <= 4'b0000;
-        alu_control_e      <= 4'b0000;
-        alu_src_a_e        <= 0;
-        alu_src_b_e        <= 0;
-        csr_addr_e         <= 0;
-        wd_sel_e           <= `WD_SEL_INT;
-        fp_alu_enable_e    <= 0;
-
-        rd1_e              <= 32'b0;
-        rd2_e              <= 32'b0;
-        rdf1_e             <= 32'b0;
-        rdf2_e             <= 32'b0;
-        csr_data_e         <= 32'b0;
-        pc_e               <= {32{1'bx}};
-        rs1_e              <= 0;
-        rs2_e              <= 0;
-        rd_e               <= 0;
-        imm_ext_e          <= {32{1'bx}};
-        pc_plus_4_e        <= {32{1'bx}};
-        branch_type_e      <= `BRANCH_NONE;
-        funct3_e           <= 3'bxxx;
-
-        bubble_e           <= 1;
-
-        fp_alu_start       <= 0;
-      end else if (!stall_e) begin
-        regw_src_e         <= regw_src_d;
-        reg_write_e        <= reg_write_d;
-        regf_write_e       <= regf_write_d;
-        csr_write_e        <= csr_write_d;
-        result_src_e       <= result_src_d;
-        mem_write_e        <= mem_write_d;
-        data_ext_control_e <= data_ext_control_d;
-        alu_control_e      <= alu_control_d;
-        alu_src_a_e        <= alu_src_a_d;
-        alu_src_b_e        <= alu_src_b_d;
-        csr_addr_e         <= csr_addr_d;
-        wd_sel_e           <= wd_sel_d;
-        fp_alu_enable_e    <= fp_alu_enable_d;
-
-        rd1_e              <= rd1_d;
-        rd2_e              <= rd2_d;
-        rdf1_e             <= rdf1_d;
-        rdf2_e             <= rdf2_d;
-        csr_data_e         <= csr_data_d;
-        pc_e               <= pc_d;
-        rs1_e              <= rs1_d;
-        rs2_e              <= rs2_d;
-        rd_e               <= rd_d;
-        imm_ext_e          <= imm_ext_d;
-        pc_plus_4_e        <= pc_plus_4_d;
-        branch_type_e      <= branch_type_d;
-        funct3_e           <= funct3_d;
-
-        bubble_e           <= bubble_d;
-
-        fp_alu_start       <= fp_alu_enable_d;
-      end else begin
-        // Disable fp_alu_start after first stall
-        fp_alu_start <= 0;
-      end
+      // Disable fp_alu_start after first stall
+      fp_alu_start <= 0;
     end
   end
 
@@ -812,7 +771,7 @@ module pipelined_cpu (
   reg [31:0] pc_plus_4_m;
 
   always @(posedge clk) begin
-    if (!rst_n) begin
+    if (!rst_n || flush_m) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
       regf_write_m       <= 0;
@@ -832,45 +791,24 @@ module pipelined_cpu (
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
     end else begin
-      if (flush_m) begin
-        regw_src_m         <= 0;
-        reg_write_m        <= 0;
-        regf_write_m       <= 0;
-        csr_write_m        <= 0;
-        result_src_m       <= `RESULT_SRC_ALU;
-        mem_write_m        <= 4'b0000;
-        data_ext_control_m <= 4'b0000;
-        csr_addr_m         <= 0;
-        wd_sel_m           <= `WD_SEL_INT;
-        rd2_m              <= 0;
-        rdf2_m             <= 0;
+      regw_src_m         <= regw_src_e;
+      reg_write_m        <= reg_write_e;
+      regf_write_m       <= regf_write_e;
+      csr_write_m        <= csr_write_e;
+      result_src_m       <= result_src_e;
+      mem_write_m        <= mem_write_e;
+      data_ext_control_m <= data_ext_control_e;
+      csr_addr_m         <= csr_addr_e;
+      wd_sel_m           <= wd_sel_e;
+      rd2_m              <= rd2_e_fw;
+      rdf2_m             <= rdf2_e_fw;
 
-        csr_data_m         <= 32'b0;
-        alu_result_m       <= 32'b0;
-        fp_alu_result_m    <= 32'b0;
-        rd_m               <= 5'b0;
-        pc_target_m        <= {32{1'bx}};
-        pc_plus_4_m        <= {32{1'bx}};
-      end else begin
-        regw_src_m         <= regw_src_e;
-        reg_write_m        <= reg_write_e;
-        regf_write_m       <= regf_write_e;
-        csr_write_m        <= csr_write_e;
-        result_src_m       <= result_src_e;
-        mem_write_m        <= mem_write_e;
-        data_ext_control_m <= data_ext_control_e;
-        csr_addr_m         <= csr_addr_e;
-        wd_sel_m           <= wd_sel_e;
-        rd2_m              <= rd2_e_fw;
-        rdf2_m             <= rdf2_e_fw;
-
-        csr_data_m         <= csr_data_e;
-        alu_result_m       <= alu_result_e;
-        fp_alu_result_m    <= fp_alu_result_e;
-        rd_m               <= rd_e;
-        pc_target_m        <= pc_target_e;
-        pc_plus_4_m        <= pc_plus_4_e;
-      end
+      csr_data_m         <= csr_data_e;
+      alu_result_m       <= alu_result_e;
+      fp_alu_result_m    <= fp_alu_result_e;
+      rd_m               <= rd_e;
+      pc_target_m        <= pc_target_e;
+      pc_plus_4_m        <= pc_plus_4_e;
     end
   end
 
