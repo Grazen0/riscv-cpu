@@ -9,7 +9,7 @@ module counter #(
     input  wire [WIDTH-1:0] compare,
     output reg  [WIDTH-1:0] out
 );
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       out <= 0;
     end else begin

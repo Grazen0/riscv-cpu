@@ -236,7 +236,7 @@ module mcc_control (
     endcase
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       state <= S_FETCH;
     end else begin
@@ -421,7 +421,7 @@ module multi_cycle_cpu (
 
   wire [31:0] pc_next = result;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       pc <= 0;
     end else begin

@@ -17,7 +17,7 @@ module matmul_control #(
   reg [ADR_WIDTH-1:0] spc;
   reg [31:0] rom[0:PRG_CAPACITY-1];
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       spc <= 0;
     end else begin

@@ -319,7 +319,7 @@ module mul_exception (
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       valid_out      <= 1'b0;
       spec_result    <= 32'b0;
@@ -429,7 +429,7 @@ module mul_prod (
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       valid_out         <= 1'b0;
       final_sign        <= 1'b0;
@@ -530,7 +530,7 @@ module mul_norm (
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       valid_out         <= 1'b0;
       exp_norm          <= 8'b0;
@@ -640,7 +640,7 @@ module mul_round (
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       valid_out         <= 1'b0;
       final_exp         <= 8'b0;
@@ -1006,7 +1006,7 @@ module fp_align #(
   end
 
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       mant_a_aligned <= {(P + 4) {1'b0}};
       mant_b_aligned <= {(P + 4) {1'b0}};
@@ -1154,7 +1154,7 @@ module fp_addsub #(
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       sum            <= {(P + 3) {1'b0}};
       carry_out      <= 1'b0;
@@ -1282,7 +1282,7 @@ module fp_normalize #(
     busy_next = (busy || (valid_in && ready_out)) && !valid_out_next;
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       mant_out       <= {(P + 4) {1'b0}};
       exp_out        <= 8'b0;
@@ -1391,7 +1391,7 @@ module fp_round #(
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       mant_rounded <= {(P + 4) {1'b0}};
       carry_out    <= 1'b0;

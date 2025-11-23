@@ -13,7 +13,7 @@ module pwm_generator #(
 
   reg [BIT_WIDTH-1:0] counter;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       counter <= 0;
     end else begin

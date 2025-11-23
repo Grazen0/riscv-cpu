@@ -203,7 +203,7 @@ module pl_interrupt_control (
     endcase
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       state <= S_IDLE;
     end else begin
@@ -397,7 +397,7 @@ module pipelined_cpu (
 
   wire [31:0] trap_pc_next = !bubble_e ? pc_e : !bubble_d ? pc_d : pc_f;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       pc_f <= 0;
     end else if ((trap_stages || !stall_f) && !stall_f_irq) begin
@@ -431,7 +431,7 @@ module pipelined_cpu (
   reg  [31:0] pc_plus_4_d;
   reg         bubble_d;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       instr_d     <= 32'h00000013;  // nop
       pc_d        <= {32{1'bx}};
@@ -582,7 +582,7 @@ module pipelined_cpu (
 
   reg        fp_alu_start;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       regw_src_e         <= 0;
       reg_write_e        <= 0;
@@ -811,7 +811,7 @@ module pipelined_cpu (
   reg [31:0] pc_target_m;
   reg [31:0] pc_plus_4_m;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       regw_src_m         <= 0;
       reg_write_m        <= 0;
@@ -919,7 +919,7 @@ module pipelined_cpu (
   reg [ 4:0] rd_w;
   reg [11:0] csr_addr_w;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       result_pre_w <= 0;
       reg_write_w  <= 0;

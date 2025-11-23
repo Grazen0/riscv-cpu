@@ -249,7 +249,7 @@ module i2c_controller #(
     endcase
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       scl_reg     <= 1;
       sda_reg     <= 1;
@@ -467,7 +467,7 @@ module nes_bridge #(
     endcase
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       read_ctr     <= 0;
       joypad       <= 8'h00;

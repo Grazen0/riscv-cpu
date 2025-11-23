@@ -29,7 +29,7 @@ module audio_unit #(
 
   integer i;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       for (i = 0; i < CHANNELS; i = i + 1) begin
         periods[i] <= 0;

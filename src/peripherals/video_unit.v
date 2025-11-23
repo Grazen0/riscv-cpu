@@ -155,7 +155,7 @@ module video_unit (
     endcase
   end
 
-  always @(posedge wclk or negedge rst_n) begin
+  always @(posedge wclk) begin
     if (!rst_n) begin
       display_on <= 0;
     end else begin
@@ -169,7 +169,7 @@ module video_unit (
     end
   end
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       x_pos         <= 0;
       y_pos         <= 0;
@@ -212,7 +212,7 @@ module video_unit (
 
   assign {vga_red_next, vga_green_next, vga_blue_next} = color_next;
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       vga_red_reg   <= 0;
       vga_green_reg <= 0;

@@ -55,7 +55,7 @@ module top_nes_bridge (
   assign sda_pin = ~sda_out ? 1'b0 : 1'bz;
   assign sda_in  = sda_pin;
 
-  always @(posedge clk_half or negedge rst_n) begin
+  always @(posedge clk_half) begin
     if (!rst_n) begin
       led <= 8'b0;
     end else begin

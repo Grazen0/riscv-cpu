@@ -20,7 +20,7 @@ module irq_gate (
   );
 
 
-  always @(posedge clk or negedge rst_n) begin
+  always @(posedge clk) begin
     if (!rst_n) begin
       irq_prev    <= 0;
       irq_pending <= 0;
