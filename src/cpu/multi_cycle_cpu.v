@@ -7,7 +7,7 @@
 `define ALU_SRC_A_OLD_PC 2'd1
 `define ALU_SRC_A_RD1 2'd2
 
-`define ALU_SRC_B_RD22 2'd0
+`define ALU_SRC_B_RD2 2'd0
 `define ALU_SRC_B_IMM 2'd1
 `define ALU_SRC_B_4 2'd2
 
@@ -144,7 +144,7 @@ module mcc_control (
           end
           OP_ALU_RD: begin
             alu_src_a   = `ALU_SRC_A_RD1;
-            alu_src_b   = `ALU_SRC_B_RD22;
+            alu_src_b   = `ALU_SRC_B_RD2;
             alu_control = {funct7[5], funct3};
 
             next_state  = S_WRITE;
@@ -158,7 +158,7 @@ module mcc_control (
           end
           OP_BRANCH: begin
             alu_src_a   = `ALU_SRC_A_RD1;
-            alu_src_b   = `ALU_SRC_B_RD22;
+            alu_src_b   = `ALU_SRC_B_RD2;
             alu_control = `ALU_SUB;
 
             branch_type = `BRANCH_COND;
@@ -405,7 +405,7 @@ module multi_cycle_cpu (
     endcase
 
     case (alu_src_b)
-      `ALU_SRC_B_RD22: src_b = rd2_buf;
+      `ALU_SRC_B_RD2: src_b = rd2_buf;
       `ALU_SRC_B_IMM: src_b = imm_ext;
       `ALU_SRC_B_4:   src_b = 4;
       default:        src_b = {32{1'bx}};
