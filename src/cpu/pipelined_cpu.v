@@ -43,12 +43,21 @@ module pl_hazard_unit (
 
     input wire [1:0] pc_src_e,
 
-    output wire stall_f,
-    output wire stall_d,
-    output wire flush_d,
-    output wire stall_e,
-    output wire flush_e,
-    output wire flush_m
+    input wire stall_f_irq,
+    input wire stall_d_irq,
+    input wire stall_e_irq,
+    input wire flush_d_irq,
+    input wire flush_e_irq,
+    input wire flush_m_irq,
+    input wire trap_stages,
+    input wire trap_mret_d,
+
+    output reg stall_f,
+    output reg stall_d,
+    output reg flush_d,
+    output reg stall_e,
+    output reg flush_e,
+    output reg flush_m
 );
   wire lw_stall = result_src_e == `RESULT_SRC_DATA && (rs1_d == rd_e || rs2_d == rd_e);
   wire fp_alu_stall = fp_alu_enable_e && !fp_alu_valid_out_e;
@@ -89,14 +98,23 @@ module pl_hazard_unit (
     end else if (csr_addr_e == csr_addr_w && csr_write_w) begin
       forward_csr_data_e = `FORWARD_WRITEBACK;
     end
-  end
 
-  assign stall_f = lw_stall || fp_alu_stall;
-  assign stall_d = lw_stall || fp_alu_stall;
-  assign stall_e = fp_alu_stall;
-  assign flush_d = pc_src_e != `PC_SRC_STEP;
-  assign flush_e = lw_stall || pc_src_e != `PC_SRC_STEP;
-  assign flush_m = fp_alu_stall;
+    if (trap_stages) begin
+      stall_f = stall_f_irq;
+      stall_d = stall_d_irq;
+      stall_e = stall_e_irq;
+      flush_d = flush_d_irq;
+      flush_e = flush_e_irq;
+      flush_m = flush_m_irq;
+    end else begin
+      stall_f = lw_stall || fp_alu_stall;
+      stall_d = lw_stall || fp_alu_stall;
+      stall_e = fp_alu_stall;
+      flush_d = trap_mret_d || pc_src_e != `PC_SRC_STEP;
+      flush_e = lw_stall || pc_src_e != `PC_SRC_STEP;
+      flush_m = fp_alu_stall;
+    end
+  end
 endmodule
 
 module pl_interrupt_control (
@@ -328,6 +346,15 @@ module pipelined_cpu (
 
       .pc_src_e(pc_src_e),
 
+      .stall_f_irq(stall_f_irq),
+      .stall_d_irq(stall_d_irq),
+      .stall_e_irq(stall_e_irq),
+      .flush_d_irq(flush_d_irq),
+      .flush_e_irq(flush_e_irq),
+      .flush_m_irq(flush_m_irq),
+      .trap_stages(trap_stages),
+      .trap_mret_d(trap_mret_d),
+
       .stall_f(stall_f),
       .stall_d(stall_d),
       .flush_d(flush_d),
@@ -353,13 +380,13 @@ module pipelined_cpu (
 
       .irq(irq),
 
-      .flush_m(flush_m_irq),
-      .flush_e(flush_e_irq),
-      .flush_d(flush_d_irq),
-
-      .stall_e(stall_e_irq),
-      .stall_d(stall_d_irq),
       .stall_f(stall_f_irq),
+      .stall_d(stall_d_irq),
+      .stall_e(stall_e_irq),
+
+      .flush_d(flush_d_irq),
+      .flush_e(flush_e_irq),
+      .flush_m(flush_m_irq),
 
       .trap_stages(trap_stages),
       .trap_pc(trap_pc)
@@ -411,18 +438,16 @@ module pipelined_cpu (
       pc_plus_4_d <= {32{1'bx}};
       bubble_d    <= 1;
     end else begin
-      if (trap_mret_d || (!trap_stages && flush_d) || flush_d_irq) begin
+      if (flush_d) begin
         instr_d     <= 32'h00000013;  // nop
         pc_d        <= {32{1'bx}};
         pc_plus_4_d <= {32{1'bx}};
         bubble_d    <= 1;
-      end else begin
-        if ((trap_stages || !stall_d) && !stall_d_irq) begin
-          instr_d     <= instr_data;
-          pc_d        <= pc_f;
-          pc_plus_4_d <= pc_plus_4_f;
-          bubble_d    <= 0;
-        end
+      end else if (!stall_d) begin
+        instr_d     <= instr_data;
+        pc_d        <= pc_f;
+        pc_plus_4_d <= pc_plus_4_f;
+        bubble_d    <= 0;
       end
     end
   end
@@ -591,7 +616,7 @@ module pipelined_cpu (
 
       fp_alu_start       <= 0;
     end else begin
-      if ((!trap_stages && flush_e) || flush_e_irq) begin
+      if (flush_e) begin
         regw_src_e         <= 0;
         reg_write_e        <= 0;
         regf_write_e       <= 0;
@@ -623,7 +648,7 @@ module pipelined_cpu (
         bubble_e           <= 1;
 
         fp_alu_start       <= 0;
-      end else if ((trap_stages || !stall_e) && !stall_e_irq) begin
+      end else if (!stall_e) begin
         regw_src_e         <= regw_src_d;
         reg_write_e        <= reg_write_d;
         regf_write_e       <= regf_write_d;
@@ -807,7 +832,7 @@ module pipelined_cpu (
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
     end else begin
-      if ((!trap_stages && flush_m) || flush_m_irq) begin
+      if (flush_m) begin
         regw_src_m         <= 0;
         reg_write_m        <= 0;
         regf_write_m       <= 0;

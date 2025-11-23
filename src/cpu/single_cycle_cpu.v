@@ -23,7 +23,8 @@ module scc_control (
     output reg csr_write,
     output reg trap_mret,
     output reg wd_sel,
-    output reg fp_alu_enable
+    output reg fp_alu_enable,
+    output reg matmul_enable
 );
   always @(*) begin
     branch_type = `BRANCH_NONE;
@@ -40,6 +41,7 @@ module scc_control (
     trap_mret = 0;
     wd_sel = 1'bx;
     fp_alu_enable = 0;
+    matmul_enable = 0;
 
     data_ext_control = funct3;
 
@@ -195,6 +197,9 @@ module scc_control (
 
         wd_sel      = `WD_SEL_FLOAT;
         mem_write   = 4'b1111;
+      end
+      7'b1111111: begin  // matmul
+        matmul_enable = 1;
       end
       default: begin
         branch_type = `BRANCH_BREAK;
