@@ -29,7 +29,8 @@ FW_INC_FLAGS := $(addprefix -I,$(FW_INC_DIRS))
 
 CFLAGS := $(FW_INC_FLAGS) -march=rv32if_zicsr -mabi=ilp32 -std=c23 -Oz -g \
 		  -ffunction-sections -fdata-sections -ffreestanding \
-		  -specs=nano.specs -nostartfiles -static
+		  -specs=nano.specs -nostartfiles -static \
+		  -Wall -Wextra -Wpedantic
 LDFLAGS := --no-warn-rwx-segments,--gc-sections
 
 CC := riscv32-none-elf-gcc
