@@ -53,7 +53,7 @@ module pipelined_cpu_tb ();
 
     clk   = 1;
     rst_n = 0;
-    #5 rst_n = 1;
+    #15 rst_n = 1;
 
     $display("");
 

@@ -526,7 +526,8 @@ module pipelined_cpu (
   wire [11:0] csr_addr_d = instr_d[31:20];
 
   cpu_csr_file csr_file (
-      .clk(~clk),
+      .clk  (~clk),
+      .rst_n(rst_n),
 
       .raddr(trap_pc ? `CSR_MTVEC : trap_mret_d ? `CSR_MEPC : csr_addr_d),
       .rdata(csr_data_d),
