@@ -31,32 +31,33 @@ module tachyon_rv (
   localparam SEL_LCD = 4'd7;
   localparam SEL_AUDIO = 4'd8;
 
+  wire rst_n_sync;
+
+  synchronizer rst_synchronizer (
+      .clk(clk),
+      .in (rst_n),
+      .out(rst_n_sync)
+  );
+
   wire [31:0] instr_data;
   wire [31:0] instr_addr;
 
   wire [31:0] data_addr, data_wdata;
-  wire [ 3:0] data_wenable;
-  wire [31:0] mem_rdata;
+  wire [3:0] data_wenable;
 
-  wire [31:0] rng_data;
+  pipelined_cpu koishi (
+      .clk  (clk),
+      .rst_n(rst_n_sync),
 
-  rng seija (
-      .clk(clk),
-      .out(rng_data)
-  );
+      .instr_addr(instr_addr),
+      .instr_data(instr_data),
 
-  dual_word_ram #(
-      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem")
-  ) patchy (
-      .clk(clk),
+      .data_addr   (data_addr),
+      .data_wdata  (data_wdata),
+      .data_wenable(data_wenable),
+      .data_rdata  (data_rdata),
 
-      .addr_1   (data_addr[13:0]),
-      .wdata_1  (data_wdata),
-      .wenable_1(data_wenable & {4{data_select == SEL_RAM}}),
-      .rdata_1  (mem_rdata),
-
-      .addr_2 (instr_addr[13:0]),
-      .rdata_2(instr_data)
+      .irq(~v_sync)
   );
 
   reg [ 3:0] data_select;
@@ -78,7 +79,7 @@ module tachyon_rv (
 
     case (data_select)
       SEL_RAM:    data_rdata = mem_rdata;
-      SEL_RNG:   data_rdata = rng_data;
+      SEL_RNG:    data_rdata = rng_data;
       SEL_VTATTR: data_rdata = {24'b0, tattr_rdata};
       SEL_VTDATA: data_rdata = {16'b0, tdata_rdata};
       SEL_JOYPAD: data_rdata = {24'b0, joypad_rdata};
@@ -89,27 +90,28 @@ module tachyon_rv (
     endcase
   end
 
-  wire rst_n_sync;
 
-  synchronizer rst_synchronizer (
+  wire [31:0] mem_rdata;
+
+  dual_word_ram #(
+      .SOURCE_FILE("/home/jdgt/Code/utec/arqui/riscv-cpu/build/firmware/firmware.mem")
+  ) patchy (
       .clk(clk),
-      .in (rst_n),
-      .out(rst_n_sync)
+
+      .addr_1   (data_addr[13:0]),
+      .wdata_1  (data_wdata),
+      .wenable_1(data_wenable & {4{data_select == SEL_RAM}}),
+      .rdata_1  (mem_rdata),
+
+      .addr_2 (instr_addr[13:0]),
+      .rdata_2(instr_data)
   );
 
-  pipelined_cpu koishi (
-      .clk  (clk),
-      .rst_n(rst_n_sync),
+  wire [31:0] rng_data;
 
-      .instr_addr(instr_addr),
-      .instr_data(instr_data),
-
-      .data_addr   (data_addr),
-      .data_wdata  (data_wdata),
-      .data_wenable(data_wenable),
-      .data_rdata  (data_rdata),
-
-      .irq(~v_sync)
+  rng seija (
+      .clk(clk),
+      .out(rng_data)
   );
 
   wire [ 7:0] tattr_rdata;

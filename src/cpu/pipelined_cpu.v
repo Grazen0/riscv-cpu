@@ -574,7 +574,7 @@ module pipelined_cpu (
 
   reg        bubble_e;
 
-  reg        fp_alu_start;
+  reg        fp_alu_start_e;
 
   always @(posedge clk) begin
     if (!rst_n || flush_e) begin
@@ -608,7 +608,7 @@ module pipelined_cpu (
 
       bubble_e           <= 1;
 
-      fp_alu_start       <= 0;
+      fp_alu_start_e     <= 0;
     end else if (!stall_e) begin
       regw_src_e         <= regw_src_d;
       reg_write_e        <= reg_write_d;
@@ -640,10 +640,10 @@ module pipelined_cpu (
 
       bubble_e           <= bubble_d;
 
-      fp_alu_start       <= fp_alu_enable_d;
+      fp_alu_start_e     <= fp_alu_enable_d;
     end else begin
       // Disable fp_alu_start after first stall
-      fp_alu_start <= 0;
+      fp_alu_start_e <= 0;
     end
   end
 
@@ -730,7 +730,7 @@ module pipelined_cpu (
       .mode_fp   (`FP_SINGLE),
       .round_mode(funct3_e[0]),
 
-      .start   (fp_alu_start),
+      .start   (fp_alu_start_e),
       .ready_in(1'b1),
 
       .valid_out(fp_alu_valid_out_e),
