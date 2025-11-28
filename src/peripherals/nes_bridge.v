@@ -53,13 +53,10 @@ module i2c_controller #(
   localparam S_WRITE_ACK_CLK_UP = 5'd18;
   localparam S_WRITE_ACK_CLK_DOWN = 5'd19;
 
-  localparam DELAY_TIME = 2 * SCL_PERIOD;
-
   reg scl_reg, scl_reg_next;
   reg sda_reg, sda_reg_next;
 
   reg [4:0] state, state_next;
-  reg [$clog2(DELAY_TIME)-1:0] delay, delay_next;
 
   reg [7:0] rdata_next;
   reg rdata_valid_next;
@@ -79,7 +76,6 @@ module i2c_controller #(
 
   always @(*) begin
     rdata_valid_next = rdata_valid;
-    delay_next       = delay;
     delay_ctr_next   = delay_ctr + 1;
     bit_ctr_next     = bit_ctr;
     wdata_buf_next   = wdata_buf;
@@ -253,7 +249,6 @@ module i2c_controller #(
     if (!rst_n) begin
       scl_reg     <= 1;
       sda_reg     <= 1;
-      delay       <= 0;
       rdata       <= 0;
       rdata_valid <= 0;
       bit_ctr     <= 0;
@@ -264,7 +259,6 @@ module i2c_controller #(
 
       state       <= S_IDLE;
     end else begin
-      delay       <= delay_next;
       rdata       <= rdata_next;
       rdata_valid <= rdata_valid_next;
       bit_ctr     <= bit_ctr_next;
@@ -441,7 +435,6 @@ module nes_bridge #(
             joypad_next[2] = i2c_rdata[6];
             joypad_next[5] = i2c_rdata[4];
             joypad_next[4] = i2c_rdata[2];
-
           end else if (read_ctr_next == 0) begin
             // Just read last byte
             joypad_next[6]    = i2c_rdata[6];
