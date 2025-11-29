@@ -38,9 +38,9 @@ matmul:
                 bge     t2, a3, fork_done
 
                 # ft1 = mat1[m1_base + k]
-                add     t6, t3, t2  # t4 = m1_base + k
-                slli    t6, t6, 2   # t4 *= 4
-                add     t6, t6, a0  # t4 += mat1
+                add     t6, t3, t2  # t6 = m1_base + k
+                slli    t6, t6, 2   # t6 *= 4
+                add     t6, t6, a0  # t6 += mat1
                 flw     ft1, 0(t6)
 
                 # ft2 = mat2[m2_base + j]
@@ -48,13 +48,12 @@ matmul:
                 slli    t6, t6, 2   # t6 *= 4
                 add     t6, t6, a1  # t6 += mat2
                 flw     ft2, 0(t6)
-
+                addi    t2, t2, 1
                 fmul.s  ft1, ft1, ft2
 
                 fadd.s  ft0, ft0, ft1   # sum += ft1
                 add     t5, t5, a4      # m2_base += p
 
-                addi    t2, t2, 1
                 j       fork
             fork_done:
 
