@@ -410,16 +410,8 @@ static inline void fixed_loop(void)
     }
 }
 
-float mat1[] = {3.0, 4.0, 7.0, 2.0, 5.0, 9.0};
-float mat2[] = {3.0, 1.0, 5.0, 6.0, 9.0, 7.0};
-float dest[3 * 3];
-extern void matmul(const float *mat1, const float *mat2, int m, int n, int p, float *dest);
-
 void main(void)
 {
-    // matmul(mat1, mat2, 3, 2, 3, dest);
-    // return;
-
     enable_irq = false;
     VCTRL->display_on = false;
 
