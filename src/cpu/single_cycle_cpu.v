@@ -198,9 +198,6 @@ module scc_control (
         wd_sel      = `WD_SEL_FLOAT;
         mem_write   = 4'b1111;
       end
-      7'b1111111: begin  // matmul
-        matmul_enable = 1;
-      end
       default: begin
         branch_type = `BRANCH_BREAK;
       end
