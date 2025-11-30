@@ -57,7 +57,7 @@ module pipelined_cpu_tb ();
 
     $display("");
 
-    #10_000;
+    #100_000;
     $display("");
     $finish();
   end
