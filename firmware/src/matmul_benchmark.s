@@ -42,7 +42,7 @@ matmul_bench:
     addi    sp, sp, -16
     sw      ra, 12(sp)
 
-    la      s0, mcycle_dest
+    la      s0, output_value
     csrr    t0, mcycle
     sw      t0, 0(s0)
 
@@ -81,5 +81,5 @@ mat_d:
 mat_dest:
     .space 3 * 3 * 4
 
-mcycle_dest:
+output_value:
     .space 4
