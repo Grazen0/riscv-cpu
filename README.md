@@ -33,6 +33,9 @@ will print characters to the terminal as they would appear on the LCD.
 
 ## System specs
 
+> [!NOTE]
+> The specs here are somewhat outdated and need to be updated.
+
 ### Memory map
 
 The **data memory** is organized as follows:
