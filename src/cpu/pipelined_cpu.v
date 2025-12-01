@@ -534,7 +534,9 @@ module pipelined_cpu (
 
       .waddr  (trap_pc ? `CSR_MEPC : csr_addr_w),
       .wdata  (trap_pc ? trap_pc_next : result_w),
-      .wenable(trap_pc || csr_write_w)
+      .wenable(trap_pc || csr_write_w),
+
+      .bubble_w(bubble_w)
   );
 
   cpu_imm_extend imm_extend (
@@ -752,6 +754,7 @@ module pipelined_cpu (
 
 
   // 4. Memory
+  reg        bubble_m;
   reg        regw_src_m;
   reg        reg_write_m;
   reg        regf_write_m;
@@ -773,6 +776,7 @@ module pipelined_cpu (
 
   always @(posedge clk) begin
     if (!rst_n || flush_m) begin
+      bubble_m           <= 1;
       regw_src_m         <= 0;
       reg_write_m        <= 0;
       regf_write_m       <= 0;
@@ -792,6 +796,7 @@ module pipelined_cpu (
       pc_target_m        <= {32{1'bx}};
       pc_plus_4_m        <= {32{1'bx}};
     end else begin
+      bubble_m           <= bubble_e;
       regw_src_m         <= regw_src_e;
       reg_write_m        <= reg_write_e;
       regf_write_m       <= regf_write_e;
@@ -804,7 +809,7 @@ module pipelined_cpu (
       rd2_m              <= rd2_e_fw;
       rdf2_m             <= rdf2_e_fw;
 
-      csr_data_m         <= csr_data_e;
+      csr_data_m         <= csr_data_e_fw;
       alu_result_m       <= alu_result_e;
       fp_alu_result_m    <= fp_alu_result_e;
       rd_m               <= rd_e;
@@ -846,6 +851,7 @@ module pipelined_cpu (
   end
 
   // 5. Writeback
+  reg        bubble_w;
   reg        reg_write_w;
   reg        regf_write_w;
   reg        csr_write_w;
@@ -860,6 +866,7 @@ module pipelined_cpu (
 
   always @(posedge clk) begin
     if (!rst_n) begin
+      bubble_w     <= 0;
       result_pre_w <= 0;
       reg_write_w  <= 0;
       regf_write_w <= 0;
@@ -872,6 +879,7 @@ module pipelined_cpu (
       rd_w         <= 5'b0;
       csr_addr_w   <= 0;
     end else begin
+      bubble_w     <= bubble_m;
       result_pre_w <= result_pre_m;
       reg_write_w  <= reg_write_m;
       regf_write_w <= regf_write_m;
