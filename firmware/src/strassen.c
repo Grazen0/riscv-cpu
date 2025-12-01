@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
 #define UMBRAL 16
 
 static void strassen_mul(const float *A, const float *B, float *C, int n)
@@ -199,69 +194,4 @@ static void strassen_mul(const float *A, const float *B, float *C, int n)
         offset += m;
         ++i;
     }
-}
-
-static void classical_mul(const float *A, const float *B, float *C, int n)
-{
-    memset(C, 0, sizeof(float) * n * n);
-    for (int i = 0; i < n; ++i) {
-        for (int k = 0; k < n; ++k) {
-            for (int j = 0; j < n; ++j) {
-                C[i * n + j] += A[i * n + k] * B[k * n + j];
-            }
-        }
-    }
-}
-
-static int equal_mat(const float *A, const float *B, int n)
-{
-    for (int i = 0; i < n * n; ++i) {
-        float diff = A[i] - B[i];
-        if (diff < 0)
-            diff = -diff;
-        if (diff > 1e-9)
-            return 0;
-    }
-    return 1;
-}
-
-int main(void)
-{
-    srand((unsigned)time(NULL));
-    int n = 512;
-
-    float A[n * n];
-    float B[n * n];
-    for (int i = 0; i < n * n; ++i) {
-        A[i] = (float)(rand() % 10);
-        B[i] = (float)(rand() % 10);
-    }
-
-    struct timespec t1, t2;
-    double tiempo_strassen, tiempo_naive;
-
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-    float C1[n * n];
-    strassen_mul(A, B, C1, n);
-    clock_gettime(CLOCK_MONOTONIC, &t2);
-
-    tiempo_strassen = (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec) / 1e9;
-
-    clock_gettime(CLOCK_MONOTONIC, &t1);
-    float C2[n * n];
-    classical_mul(A, B, C2, n);
-    clock_gettime(CLOCK_MONOTONIC, &t2);
-
-    tiempo_naive = (t2.tv_sec - t1.tv_sec) + (t2.tv_nsec - t1.tv_nsec) / 1e9;
-
-    printf("Comparando resultados...\n");
-    if (equal_mat(C1, C2, n))
-        printf("OK: resultados coinciden.\n");
-    else
-        printf("ERROR: discrepancia entre Strassen y naive.\n");
-
-    printf("Tiempo Strassen: %.6f s\n", tiempo_strassen);
-    printf("Tiempo tradicional: %.6f s\n", tiempo_naive);
-
-    return 0;
 }
